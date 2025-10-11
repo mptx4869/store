@@ -21,7 +21,18 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	//Database 
+	implementation 'org.postgresql:postgresql'
+
+	//Lombok 
+	compileOnly 'org.projectlombok:lombok:1.18.34'
+	annotationProcessor 'org.projectlombok:lombok:1.18.34'
+	// testCompileOnly 'org.projectlombok:lombok'
+	// testAnnotationProcessor 'org.projectlombok:lombok'
+	
 }
 
 tasks.named('test') {
@@ -41,4 +52,8 @@ test{
     	showStandardStreams = false
 
 	}
+}
+
+bootRun {
+    jvmArgs = ["-Duser.timezone=Asia/Ho_Chi_Minh"]
 }
