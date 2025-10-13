@@ -26,6 +26,7 @@ dependencies {
 
 	//Database 
 	implementation 'org.postgresql:postgresql'
+	implementation 'com.h2database:h2'
 
 	//Lombok 
 	compileOnly 'org.projectlombok:lombok:1.18.34'
@@ -33,6 +34,9 @@ dependencies {
 	// testCompileOnly 'org.projectlombok:lombok'
 	// testAnnotationProcessor 'org.projectlombok:lombok'
 	
+
+	//devtools framework
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 
 tasks.named('test') {

@@ -2,17 +2,49 @@ package com.example.store.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.example.store.dto.LoginRequest;
+import com.example.store.dto.LoginResponse;
+import com.example.store.service.AutherService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 
 @RestController
 @RequestMapping("/")
 public class AppController {
+
+    @Autowired
+    private AutherService autherService; 
     
     @GetMapping
     public String getMethodName() {
-        return new String("Hello");
+        return new String("Hellmamao");
     }
-    
+
+    //login API
+    @PostMapping("login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest){
+        
+        System.out.println("Login Request: " + loginRequest.getUsername() + " - " + loginRequest.getPassword());
+        LoginResponse loginResponse = autherService.doLogin(loginRequest);
+        if(loginResponse != null){
+            System.out.println("Login Successful for user: " + loginResponse.getUsername());
+            return ResponseEntity.ok(loginResponse);
+        }
+        return ResponseEntity.status(401).build();
+    }
+
+
+    //register API
+    @GetMapping("register")
+    public String register(LoginRequest loginRequest){
+
+        return "Register Page";
+    }
 }
