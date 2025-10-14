@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 
 import com.example.store.dto.LoginRequest;
+import com.example.store.dto.LoginResponse;
+import com.example.store.dto.RegisterRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -68,22 +70,75 @@ public class UserTest {
 	@Test
 	@DirtiesContext
 	void checkRegisterNewUser(){
-		RequestEntity<LoginRequest> request = RequestEntity
+		RequestEntity<RegisterRequest> request = RequestEntity
 			.post("/register")
-			.body(new LoginRequest("nhanhoa", "123456"));
+			.body(new RegisterRequest("newUser", "newpassword","newUser@gmail.com", "USER"));
 
 		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-
-		RequestEntity<LoginRequest> loginRequest = RequestEntity
-			.post("/login")
-			.body(new LoginRequest("nhanhoa", "123456"));
-
-		ResponseEntity<String> loginResponse = restTemplate.exchange(loginRequest, String.class);
-		assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-
-
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 	}
 
+    @Test
+    @DirtiesContext
+    void checkRegisterDuplicateUsernameOrEmail(){
+
+        //duplicate username
+        RequestEntity<RegisterRequest> request = RequestEntity
+            .post("/register")
+            .body(new RegisterRequest("nhanhoa", "newpassword","newuser@gmail.com","User"));
+
+        ResponseEntity<String> response = restTemplate.exchange(request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).contains("Username already exists");
+
+        //duplicate email
+        request = RequestEntity
+            .post("/register")
+            .body(new RegisterRequest("duplicateEmail", "newpassword","nhanhoa@gmail.com","User"));
+
+        response = restTemplate.exchange(request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).contains("Email already exists");
+    }
+
+    @Test
+    void testValidationEmptyRegister(){
+
+        //empty username
+        RequestEntity<RegisterRequest> request = RequestEntity
+            .post("/register")
+            .body(new RegisterRequest("", "newpassword","new@gmail.com","User"));
+        
+        ResponseEntity<String> response = restTemplate.exchange(request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("Username cannot be empty");
+    
+        //empty password
+        request = RequestEntity
+            .post("/register")
+            .body(new RegisterRequest("newUser", "","new@gmail.com","User"));
+        response = restTemplate.exchange(request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("Password cannot be empty");
+
+        //empty email
+        request = RequestEntity
+            .post("/register")
+            .body(new RegisterRequest("newUser", "newpassword","","User"));
+        response = restTemplate.exchange(request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("Email cannot be empty");
+
+        //empty role
+        request = RequestEntity
+            .post("/register")
+            .body(new RegisterRequest("newUser", "newpassword","new@gmail.com",""));
+        response = restTemplate.exchange(request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("Role cannot be empty");
+
+    }
+
+        
 
 }

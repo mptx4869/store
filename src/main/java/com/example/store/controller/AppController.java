@@ -11,6 +11,7 @@ import com.example.store.service.AutherService;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,9 +46,14 @@ public class AppController {
 
     //register API
     @PostMapping("register")
-    public LoginResponse register(@RequestBody RegisterRequest registerRequest){
+    public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest registerRequest){
+        registerRequest.setRole("USER"); //default role is USER
         
-        
-        return null ;
+        LoginResponse loginResponse = autherService.register(registerRequest);
+        if(loginResponse != null){
+            return ResponseEntity.created(null).body(loginResponse);
+        }else{
+            throw new RuntimeException("Registration failed");
+        }
     }
 }

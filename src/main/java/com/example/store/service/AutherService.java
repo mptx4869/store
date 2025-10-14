@@ -8,6 +8,7 @@ import com.example.store.repository.UserRepository;
 
 import com.example.store.dto.LoginRequest;
 import com.example.store.dto.LoginResponse;
+import com.example.store.dto.RegisterRequest;
 import com.example.store.model.*;
 import com.example.store.exception.*;
 
@@ -43,10 +44,20 @@ public class AutherService {
     }
 
     //register method
-    public User register(User user){
-        if(userRepo.existsByEmail(user.getEmail())){
+    public LoginResponse register(RegisterRequest registerRequest){
+
+        if(userRepo.existsByUsername(registerRequest.getUsername())){
+            throw new ConflictException("Username already exists");
+        }
+
+        if(userRepo.existsByEmail(registerRequest.getEmail())){
             throw new ConflictException("Email already exists");
         }
-        return userRepo.save(user);
+
+        User newUser = new User(registerRequest.getUsername(), registerRequest.getPassword(), registerRequest.getEmail(), registerRequest.getRole());
+        userRepo.save(newUser);
+
+        return doLogin(new LoginRequest(registerRequest.getUsername(),registerRequest.getPassword()));
+
     }  
 }
