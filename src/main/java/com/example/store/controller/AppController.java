@@ -5,7 +5,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.store.dto.LoginRequest;
 import com.example.store.dto.LoginResponse;
+import com.example.store.dto.RegisterRequest;
 import com.example.store.service.AutherService;
+
+import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -29,9 +32,8 @@ public class AppController {
 
     //login API
     @PostMapping("login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest){
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest){
         
-        System.out.println("Login Request: " + loginRequest.getUsername() + " - " + loginRequest.getPassword());
         LoginResponse loginResponse = autherService.doLogin(loginRequest);
         if(loginResponse != null){
             System.out.println("Login Successful for user: " + loginResponse.getUsername());
@@ -42,9 +44,10 @@ public class AppController {
 
 
     //register API
-    @GetMapping("register")
-    public String register(LoginRequest loginRequest){
-
-        return "Register Page";
+    @PostMapping("register")
+    public LoginResponse register(@RequestBody RegisterRequest registerRequest){
+        
+        
+        return null ;
     }
 }
