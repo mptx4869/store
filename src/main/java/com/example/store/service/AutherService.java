@@ -1,6 +1,12 @@
 package com.example.store.service;
 
+import java.net.PasswordAuthentication;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.store.repository.UserRepository;
@@ -17,28 +23,38 @@ public class AutherService {
     
     @Autowired
     private UserRepository userRepo;
+    
+    @Autowired 
+    AuthenticationManager authenManager;
+
+    @Autowired 
+    private PasswordEncoder passwordEncoder;
 
     public LoginResponse doLogin( LoginRequest loginRequest){
-        //check username and password from database
-        //if valid, generate token and return LoginResponse
-        //if invalid, return null or throw exception
         
         System.out.println("Attempting login for user: " + loginRequest.getUsername());
 
-        User user ;
-        if(Validation.isValidEmail(loginRequest.getUsername())) {
-            user = userRepo.findByEmail(loginRequest.getUsername());
-        }else
-            user = userRepo.findByUsername(loginRequest.getUsername());
-        
-        if(user == null){
-            throw new LoginException("Wrong username or password");
-        }
+       
+        try{
+            System.out.println("in try");
+            
+            UserDetails principal =(UserDetails) authenManager
+                .authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                        loginRequest.getUsername(), 
+                        loginRequest.getPassword()
+                    )
+                ).getPrincipal();
 
-        if(user!= null && user.getPassword().equals(loginRequest.getPassword())){
-            //generate token (dummy token for now)
-            return new LoginResponse(user.getUserId(), user.getEmail(), user.getRole(), "dummy-token");
-        }else{
+            System.out.println("Login successful for user: " + loginRequest.getUsername());
+
+            return new LoginResponse(
+                principal.getUsername(),
+                "",
+                "USER",
+                 "dummy-token");
+
+        }catch(Exception ex){
             throw new LoginException("Wrong username or password");
         }
     }
@@ -54,7 +70,7 @@ public class AutherService {
             throw new ConflictException("Email already exists");
         }
 
-        User newUser = new User(registerRequest.getUsername(), registerRequest.getPassword(), registerRequest.getEmail(), registerRequest.getRole());
+        User newUser = new User(registerRequest.getUsername(), passwordEncoder.encode(registerRequest.getPassword()), registerRequest.getEmail(), registerRequest.getRole());
         userRepo.save(newUser);
 
         return doLogin(new LoginRequest(registerRequest.getUsername(),registerRequest.getPassword()));

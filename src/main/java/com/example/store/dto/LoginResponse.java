@@ -15,5 +15,10 @@ public class LoginResponse {
     private String role;
     private String token;
     
+    public LoginResponse(String username, String email, String role, String token) {
+        this.username = username;
+        this.role = role;
+        this.token = token;
+    }
 
 }

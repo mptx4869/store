@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 
 import com.example.store.dto.LoginRequest;
-import com.example.store.dto.LoginResponse;
 import com.example.store.dto.RegisterRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +41,17 @@ public class UserTest {
 		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 	}
+
+    @Test void shouldNotAcceptWrongPassword(){
+        RequestEntity<LoginRequest> request = RequestEntity
+            .post("/login")
+            .body(new LoginRequest("nhanhoa", "wrongpassword"));
+
+        ResponseEntity<String> response = restTemplate.exchange(request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getBody()).contains("Wrong username or password");
+        
+    }
 
 	@Test
 	void testValidationEmptyLogin(){
@@ -94,7 +104,7 @@ public class UserTest {
         //duplicate email
         request = RequestEntity
             .post("/register")
-            .body(new RegisterRequest("duplicateEmail", "newpassword","nhanhoa@gmail.com","User"));
+            .body(new RegisterRequest("duplicateEmail", "newpassword","hoa@example.com","User"));
 
         response = restTemplate.exchange(request, String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);

@@ -2,7 +2,13 @@ package com.example.store.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDateTime;
 import java.util.Set;
+
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.LastModifiedDate;
 
 @Entity
 @Table(name = "users")
@@ -27,6 +33,15 @@ public class User {
     private String email;
 
     private String role; // e.g., ADMIN, CUSTOMER
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    @ColumnDefault("CURRENT_TIMESTAMP")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", insertable = false, updatable = true)
+    //@LastModifiedDate("Curent_TIMESTAMP")
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Order> orders;
