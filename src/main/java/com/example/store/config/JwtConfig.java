@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2Res
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -32,7 +32,7 @@ public class JwtConfig {
     }
 
     public String extractUserName(String token){
-        return null;
+        return extractClaim(token, Claims::getSubject);
     }
 
     public <T> T extractClaim(String token, 
@@ -63,12 +63,16 @@ public class JwtConfig {
         return generateToken(Map.of("roles",userDetails.getAuthorities()),userDetails) ;
     }
 
-    public String generateToken(Map<String, Object> claims, UserDetails userDetails){
+    public String generateToken(
+        Map<String, Object> extraClaims,
+        UserDetails userDetails
+        ){
         
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
 
         String token = Jwts.builder()
+            .setClaims(extraClaims)
             .setSubject(userDetails.getUsername())
             .setIssuedAt(new Date())
             .setExpiration(exp)
@@ -78,6 +82,10 @@ public class JwtConfig {
         return token;
     }
 
+    public boolean isTokenValid(String token, UserDetails userDetails){
+        final String username = extractUserName(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
     public String extractractUserName(String token){
         return null;
     }

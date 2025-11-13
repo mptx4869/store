@@ -12,7 +12,9 @@ import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -46,7 +48,7 @@ public class AppController {
     //register API
     @PostMapping("register")
     public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest registerRequest){
-        registerRequest.setRole("USER"); //default role is USER
+        registerRequest.setRole_id(2); //default role is USER
         
         LoginResponse loginResponse = autherService.register(registerRequest);
         if(loginResponse != null){
@@ -54,5 +56,11 @@ public class AppController {
         }else{
             throw new RuntimeException("Registration failed");
         }
+    }
+
+    @DeleteMapping("user/{userName}")
+    public ResponseEntity<Void> deleteUser(@PathVariable String userName){
+        autherService.deleteUser(userName);
+        return ResponseEntity.noContent().build();
     }
 }

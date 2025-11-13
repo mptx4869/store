@@ -1,6 +1,7 @@
 package com.example.store.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Setter @Getter
@@ -15,6 +16,6 @@ public class RegisterRequest {
     @NotBlank(message = "Email cannot be empty")
     String email;
 
-    @NotBlank(message = "Role cannot be empty")
-    String role;
+    @NotNull(message = "Role cannot be empty")
+    Integer role_id;
 }

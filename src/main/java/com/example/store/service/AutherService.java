@@ -10,8 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.store.repository.UserRepository;
-
-
+import com.example.store.config.JwtConfig;
 import com.example.store.dto.LoginRequest;
 import com.example.store.dto.LoginResponse;
 import com.example.store.dto.RegisterRequest;
@@ -30,6 +29,9 @@ public class AutherService {
     @Autowired 
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private JwtConfig jwtConfig;
+
     public LoginResponse doLogin( LoginRequest loginRequest){
         
         System.out.println("Attempting login for user: " + loginRequest.getUsername());
@@ -45,17 +47,18 @@ public class AutherService {
                         loginRequest.getPassword()
                     )
                 ).getPrincipal();
-
+            System.out.println("login token: " + jwtConfig.generateToken(principal));
             System.out.println("Login successful for user: " + loginRequest.getUsername());
 
             return new LoginResponse(
                 principal.getUsername(),
-                "",
                 "USER",
-                 "dummy-token");
+                "jwtConfig.generateToken(principal)"
+            );
 
         }catch(Exception ex){
-            throw new LoginException("Wrong username or password");
+            System.out.println("Login failed for user: " + loginRequest.getUsername() + " - " + ex.getMessage());
+            throw new LoginException("Login failed");
         }
     }
 
@@ -70,10 +73,19 @@ public class AutherService {
             throw new ConflictException("Email already exists");
         }
 
-        User newUser = new User(registerRequest.getUsername(), passwordEncoder.encode(registerRequest.getPassword()), registerRequest.getEmail(), registerRequest.getRole());
+        User newUser = new User(
+            registerRequest.getUsername()
+            ,passwordEncoder.encode(registerRequest.getPassword())
+            ,registerRequest.getEmail()
+            ,registerRequest.getRole_id()
+        );
         userRepo.save(newUser);
 
         return doLogin(new LoginRequest(registerRequest.getUsername(),registerRequest.getPassword()));
 
     }  
+
+    public void deleteUser(String userName){
+        userRepo.deleteByUsername(userName);
+    }
 }

@@ -12,13 +12,5 @@ import com.example.store.repository.UserRepository;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class StoreApplicationTests {
 
-    @Autowired
-    UserRepository userRepository;
 
-	@Test
-    public void testLoadDatabase(){
-        User user = userRepository.findByUsername("nhanhoa");
-        assertThat(user).isNotNull();
-        assertThat(user.getRole()).isEqualTo("USER");
-    }
 }

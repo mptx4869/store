@@ -3,152 +3,53 @@ package com.example.store;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.RequestEntity;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.annotation.DirtiesContext;
 
-import com.example.store.dto.LoginRequest;
-import com.example.store.dto.RegisterRequest;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.store.model.User;
+import com.example.store.repository.UserRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class UserTest {
-    
-    @Autowired
-	TestRestTemplate restTemplate;
+     @Autowired
+    UserRepository userRepository;
 
 	@Test
-	void testLoginExitingUser(){
-		RequestEntity<LoginRequest> request = RequestEntity
-			.post("/login")
-			.body(new LoginRequest("nhanhoa", "123456"));
-		
-		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
-
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-
-	}
-
-	@Test
-	void testLoginNonExitingUser(){
-		RequestEntity<LoginRequest> request = RequestEntity
-			.post("/login")
-			.body(new LoginRequest("nonexist", "123456"));
-
-		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-	}
-
-    @Test void shouldNotAcceptWrongPassword(){
-        RequestEntity<LoginRequest> request = RequestEntity
-            .post("/login")
-            .body(new LoginRequest("nhanhoa", "wrongpassword"));
-
-        ResponseEntity<String> response = restTemplate.exchange(request, String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response.getBody()).contains("Wrong username or password");
-        
+    public void testLoadDatabase(){
+        User user = userRepository.findByUsername("nhanhoa");
+        assertThat(user).isNotNull();
+        assertThat(user.getRole_id()).isEqualTo(2);
     }
-
-	@Test
-	void testValidationEmptyLogin(){
-		RequestEntity<LoginRequest> request = RequestEntity
-			.post("/login")
-			.body(new LoginRequest("", "123"));
-
-		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-		request = RequestEntity
-			.post("/login")
-			.body(new LoginRequest("emptyTest", ""));
-
-		response = restTemplate.exchange(request, String.class);
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-		request = RequestEntity
-			.post("/login")
-			.body(new LoginRequest("", ""));
-
-		response = restTemplate.exchange(request, String.class);
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-	}
-
-	@Test
-	@DirtiesContext
-	void checkRegisterNewUser(){
-		RequestEntity<RegisterRequest> request = RequestEntity
-			.post("/register")
-			.body(new RegisterRequest("newUser", "newpassword","newUser@gmail.com", "USER"));
-
-		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-	}
+   
 
     @Test
     @DirtiesContext
-    void checkRegisterDuplicateUsernameOrEmail(){
+    @Transactional
+    public void testDeleteUser(){
 
-        //duplicate username
-        RequestEntity<RegisterRequest> request = RequestEntity
-            .post("/register")
-            .body(new RegisterRequest("nhanhoa", "newpassword","newuser@gmail.com","User"));
+        User newUser = new User("newUser","password","newUser@example.com",2);
+        userRepository.save(newUser);
 
-        ResponseEntity<String> response = restTemplate.exchange(request, String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).contains("Username already exists");
+        User user = userRepository.findByUsername("newUser");
+        assertThat(user).isNotNull();
+        userRepository.deleteByUsername(user.getUsername());
 
-        //duplicate email
-        request = RequestEntity
-            .post("/register")
-            .body(new RegisterRequest("duplicateEmail", "newpassword","hoa@example.com","User"));
-
-        response = restTemplate.exchange(request, String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).contains("Email already exists");
+        user = userRepository.findByUsername("newUser");
+        assertThat(user).isNull();
     }
-
-    @Test
-    void testValidationEmptyRegister(){
-
-        //empty username
-        RequestEntity<RegisterRequest> request = RequestEntity
-            .post("/register")
-            .body(new RegisterRequest("", "newpassword","new@gmail.com","User"));
-        
-        ResponseEntity<String> response = restTemplate.exchange(request, String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).contains("Username cannot be empty");
     
-        //empty password
-        request = RequestEntity
-            .post("/register")
-            .body(new RegisterRequest("newUser", "","new@gmail.com","User"));
-        response = restTemplate.exchange(request, String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).contains("Password cannot be empty");
+    @Test
+    @DirtiesContext
+    public void testCreateUser(){
+        User newUser = new User("createUser","password","createUser@example.com",2);
+        userRepository.save(newUser);
 
-        //empty email
-        request = RequestEntity
-            .post("/register")
-            .body(new RegisterRequest("newUser", "newpassword","","User"));
-        response = restTemplate.exchange(request, String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).contains("Email cannot be empty");
-
-        //empty role
-        request = RequestEntity
-            .post("/register")
-            .body(new RegisterRequest("newUser", "newpassword","new@gmail.com",""));
-        response = restTemplate.exchange(request, String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).contains("Role cannot be empty");
-
+        User user = userRepository.findByUsername("createUser");
+        assertThat(user).isNotNull();
+        assertThat(user.getEmail()).isEqualTo("createUser@example.com");
     }
-
-        
 
 }

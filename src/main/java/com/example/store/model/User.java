@@ -8,8 +8,6 @@ import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.data.annotation.LastModifiedDate;
-
 @Entity
 @Table(name = "users")
 @Data
@@ -32,24 +30,24 @@ public class User {
     @Column(unique = true)
     private String email;
 
-    private String role; // e.g., ADMIN, CUSTOMER
+    @Column(name = "role_id", nullable = false)
+    private Integer role_id; // e.g., ADMIN, CUSTOMER
 
     @Column(name = "created_at", insertable = false, updatable = false)
     @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", insertable = false, updatable = true)
-    //@LastModifiedDate("Curent_TIMESTAMP")
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Order> orders;
 
-    public User(String username, String password, String email, String role) {
+    public User(String username, String password, String email, Integer role) {
         this.username = username;
         this.password = password;
         this.email = email;
-        this.role = role;
+        this.role_id = role;
     }
 }
