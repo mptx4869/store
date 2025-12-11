@@ -1,19 +1,23 @@
 package com.example.store.repository;
 
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.store.model.User;
-import org.springframework.data.repository.Repository;
 
+public interface UserRepository extends JpaRepository<User, Long> {
 
-public interface UserRepository extends Repository<User, Long> {
-    
-    User findByUsername(String username);
-    User save(User user);
+    @EntityGraph(attributePaths = "role")
+    Optional<User> findByUsername(String username);
+
+    @EntityGraph(attributePaths = "role")
+    Optional<User> findByEmail(String email);
+
     boolean existsByUsername(String username);
+
     boolean existsByEmail(String email);
-    User findByEmail(String email);
-    User findByUserId(Long userId);
-    void deleteById(Long userId);
+
     void deleteByUsername(String username);
-    
 }

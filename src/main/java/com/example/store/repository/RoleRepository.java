@@ -1,16 +1,15 @@
 package com.example.store.repository;
 
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
 import com.example.store.model.Role;
 
-import java.util.List;
+public interface RoleRepository extends JpaRepository<Role, Long> {
 
-import org.springframework.data.repository.Repository;
-
-public interface RoleRepository extends Repository<Role, Long> {
-    Role findById(long id);
-    Role findByName(String name);
-    List<Role> findAll();
-    void save(Role role);
-    void delete(Role role);
-
+    Optional<Role> findByName(String name);
+    @Query ("SELECT r.id FROM Role r WHERE r.name = ?1")
+    Optional<Long> getIdByName(String name);
 }

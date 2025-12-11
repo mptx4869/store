@@ -1,0 +1,161 @@
+{
+  "version": "1.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "detailLevel": "All",
+  "tablePositions": [
+    {
+      "name": "roles",
+      "schemaName": "public",
+      "x": 12,
+      "y": 12
+    },
+    {
+      "name": "users",
+      "schemaName": "public",
+      "x": 586,
+      "y": 12
+    },
+    {
+      "name": "user_profiles",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 12
+    },
+    {
+      "name": "addresses",
+      "schemaName": "public",
+      "x": 1190.456691444289,
+      "y": 446.2637545529111
+    },
+    {
+      "name": "publishers",
+      "schemaName": "public",
+      "x": 12,
+      "y": 250
+    },
+    {
+      "name": "authors",
+      "schemaName": "public",
+      "x": 12,
+      "y": 520
+    },
+    {
+      "name": "categories",
+      "schemaName": "public",
+      "x": 12,
+      "y": 790
+    },
+    {
+      "name": "books",
+      "schemaName": "public",
+      "x": 586,
+      "y": 346
+    },
+    {
+      "name": "book_authors",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 3215
+    },
+    {
+      "name": "book_categories",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 3453
+    },
+    {
+      "name": "product_skus",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 1478
+    },
+    {
+      "name": "inventory",
+      "schemaName": "public",
+      "x": 1882.5,
+      "y": 53
+    },
+    {
+      "name": "book_media",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 2881
+    },
+    {
+      "name": "coupons",
+      "schemaName": "public",
+      "x": 12,
+      "y": 1028
+    },
+    {
+      "name": "price_history",
+      "schemaName": "public",
+      "x": 1882.5,
+      "y": 259
+    },
+    {
+      "name": "wishlist_items",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 905
+    },
+    {
+      "name": "reviews",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 1111
+    },
+    {
+      "name": "shopping_carts",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 1909
+    },
+    {
+      "name": "cart_items",
+      "schemaName": "public",
+      "x": 1882.5,
+      "y": 562
+    },
+    {
+      "name": "orders",
+      "schemaName": "public",
+      "x": 1882.5,
+      "y": 864
+    },
+    {
+      "name": "order_items",
+      "schemaName": "public",
+      "x": 2447.5,
+      "y": 12
+    },
+    {
+      "name": "order_status_history",
+      "schemaName": "public",
+      "x": 2447.5,
+      "y": 808
+    },
+    {
+      "name": "payments",
+      "schemaName": "public",
+      "x": 2447.5,
+      "y": 410
+    },
+    {
+      "name": "user_activity_logs",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 2212
+    },
+    {
+      "name": "audit_logs",
+      "schemaName": "public",
+      "x": 1212,
+      "y": 2578
+    }
+  ],
+  "tableGroupCollapseStates": [],
+  "stickyNoteLayouts": [],
+  "referencePaths": []
+}

@@ -1,6 +1,6 @@
--- Schema for a bookstore database based on the provided PostgreSQL dump
+-- Schema for the refactored bookstore domain (PostgreSQL)
 
--- Function update at updated_at 
+-- Helper function to maintain updated_at consistency across tables
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -9,79 +9,205 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Users Table 
-CREATE TABLE users (
-    user_id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(255),
-    username VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP
-);
-
--- Trigger apply for users
-CREATE TRIGGER set_updated_at
-BEFORE UPDATE ON users
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
--- Roles Table
+-- ---------------------------
+-- Table: roles
+-- ---------------------------
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Categories Table
+CREATE TRIGGER trg_roles_updated_at
+BEFORE UPDATE ON roles
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: users
+-- ---------------------------
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role_id BIGINT NOT NULL,
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+CREATE TRIGGER trg_users_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: categories
+-- ---------------------------
 CREATE TABLE categories (
-    category_id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL
-);
-
--- Books Table
-CREATE TABLE books (
-    book_id BIGSERIAL PRIMARY KEY,
-    author VARCHAR(255),
-    cover_image VARCHAR(255),
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
-    isbn VARCHAR(255),
-    price NUMERIC(38,2),
-    published_date DATE,
-    publisher VARCHAR(255),
-    stock INTEGER,
-    title VARCHAR(255) NOT NULL
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Book_Categories Table (many-to-many relation between books and categories)
+CREATE TRIGGER trg_categories_updated_at
+BEFORE UPDATE ON categories
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: books
+-- ---------------------------
+CREATE TABLE books (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    subtitle VARCHAR(255),
+    description TEXT,
+    language VARCHAR(50),
+    pages INTEGER,
+    publisher_id BIGINT,
+    published_date DATE,
+    base_price NUMERIC(12,2) NOT NULL,
+    default_sku_id BIGINT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ
+);
+
+CREATE TRIGGER trg_books_updated_at
+BEFORE UPDATE ON books
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: product_skus
+-- ---------------------------
+CREATE TABLE product_skus (
+    id BIGSERIAL PRIMARY KEY,
+    book_id BIGINT NOT NULL,
+    sku VARCHAR(100) NOT NULL UNIQUE,
+    format VARCHAR(100),
+    price_override NUMERIC(12,2),
+    weight_grams INTEGER,
+    length_mm INTEGER,
+    width_mm INTEGER,
+    height_mm INTEGER,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sku_book FOREIGN KEY (book_id) REFERENCES books(id)
+);
+
+CREATE TRIGGER trg_product_skus_updated_at
+BEFORE UPDATE ON product_skus
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: inventory
+-- ---------------------------
+CREATE TABLE inventory (
+    sku_id BIGINT PRIMARY KEY,
+    stock INTEGER DEFAULT 0,
+    reserved INTEGER DEFAULT 0,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_inventory_sku FOREIGN KEY (sku_id) REFERENCES product_skus(id)
+);
+
+-- ---------------------------
+-- Table: book_categories (junction)
+-- ---------------------------
 CREATE TABLE book_categories (
     book_id BIGINT NOT NULL,
     category_id BIGINT NOT NULL,
-    created_at TIMESTAMP(6),
     priority INTEGER,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (book_id, category_id),
-    FOREIGN KEY (book_id) REFERENCES books(book_id),
-    FOREIGN KEY (category_id) REFERENCES categories(category_id)
+    CONSTRAINT fk_book_categories_book FOREIGN KEY (book_id) REFERENCES books(id),
+    CONSTRAINT fk_book_categories_category FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
--- Orders Table
-CREATE TABLE orders (
-    order_id BIGSERIAL PRIMARY KEY,
-    created_at TIMESTAMP(6),
-    payment_method VARCHAR(255),
-    shipping_address VARCHAR(255),
-    status VARCHAR(255),
-    total_amount NUMERIC(38,2),
+-- ---------------------------
+-- Table: shopping_carts
+-- ---------------------------
+CREATE TABLE shopping_carts (
+    id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    total_items INTEGER DEFAULT 0,
+    subtotal NUMERIC(12,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- Order_Items Table
-CREATE TABLE order_items (
-    order_item_id BIGSERIAL PRIMARY KEY,
-    price_at_purchase NUMERIC(38,2),
-    quantity INTEGER,
-    book_id BIGINT NOT NULL,
-    order_id BIGINT NOT NULL,
-    FOREIGN KEY (book_id) REFERENCES books(book_id),
-    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+CREATE TRIGGER trg_shopping_carts_updated_at
+BEFORE UPDATE ON shopping_carts
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: cart_items
+-- ---------------------------
+CREATE TABLE cart_items (
+    id BIGSERIAL PRIMARY KEY,
+    cart_id BIGINT NOT NULL,
+    sku_id BIGINT NOT NULL,
+    quantity INTEGER NOT NULL,
+    unit_price NUMERIC(12,2) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_cart_item_cart FOREIGN KEY (cart_id) REFERENCES shopping_carts(id),
+    CONSTRAINT fk_cart_item_sku FOREIGN KEY (sku_id) REFERENCES product_skus(id),
+    CONSTRAINT uk_cart_item UNIQUE (cart_id, sku_id)
 );
+
+CREATE TRIGGER trg_cart_items_updated_at
+BEFORE UPDATE ON cart_items
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: orders
+-- ---------------------------
+CREATE TABLE orders (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    cart_id BIGINT,
+    shipping_address_id BIGINT,
+    billing_address_id BIGINT,
+    total_amount NUMERIC(12,2) NOT NULL,
+    currency VARCHAR(10) DEFAULT 'USD',
+    status VARCHAR(30) NOT NULL,
+    coupon_id BIGINT,
+    placed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_orders_cart FOREIGN KEY (cart_id) REFERENCES shopping_carts(id)
+);
+
+CREATE TRIGGER trg_orders_updated_at
+BEFORE UPDATE ON orders
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: order_items
+-- ---------------------------
+CREATE TABLE order_items (
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    sku_id BIGINT NOT NULL,
+    book_id BIGINT NOT NULL,
+    quantity INTEGER NOT NULL,
+    unit_price NUMERIC(12,2) NOT NULL,
+    tax_amount NUMERIC(12,2),
+    discount_amount NUMERIC(12,2),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id),
+    CONSTRAINT fk_order_items_book FOREIGN KEY (book_id) REFERENCES books(id),
+    CONSTRAINT fk_order_items_sku FOREIGN KEY (sku_id) REFERENCES product_skus(id)
+);
+
+CREATE TRIGGER trg_order_items_updated_at
+BEFORE UPDATE ON order_items
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

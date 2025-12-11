@@ -1,0 +1,178 @@
+{
+  "roles": [
+    {
+      "id": 1,
+      "name": "ROLE_ADMIN",
+      "description": "Administrator with full permissions"
+    },
+    {
+      "id": 2,
+      "name": "ROLE_CUSTOMER",
+      "description": "Customer account for storefront"
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "passwordHash": "$2a$10$abcdefghijklmnopqrstuv",
+      "roleId": 1,
+      "status": "ACTIVE"
+    },
+    {
+      "id": 2,
+      "username": "jane.doe",
+      "email": "jane.doe@example.com",
+      "passwordHash": "$2a$10$uvwxyzabcdefghijklmnopr",
+      "roleId": 2,
+      "status": "ACTIVE"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Science Fiction",
+      "description": "Stories that explore futuristic or speculative concepts"
+    },
+    {
+      "id": 2,
+      "name": "Self Help",
+      "description": "Guides for personal development and productivity"
+    }
+  ],
+  "books": [
+    {
+      "id": 1,
+      "title": "Stars Beyond",
+      "subtitle": "Journeys through the Unknown",
+      "description": "An epic adventure across uncharted galaxies.",
+      "language": "English",
+      "pages": 384,
+      "publisherId": 1001,
+      "publishedDate": "2023-05-16",
+      "basePrice": 19.99,
+      "defaultSkuId": 1
+    },
+    {
+      "id": 2,
+      "title": "Better Habits",
+      "subtitle": "Small Steps to Big Change",
+      "description": "A hands-on guide to building lasting routines.",
+      "language": "English",
+      "pages": 256,
+      "publisherId": 1002,
+      "publishedDate": "2022-09-05",
+      "basePrice": 15.50,
+      "defaultSkuId": 2
+    }
+  ],
+  "productSkus": [
+    {
+      "id": 1,
+      "bookId": 1,
+      "sku": "STAR-HC-001",
+      "format": "Hardcover",
+      "priceOverride": 24.99,
+      "weightGrams": 720,
+      "lengthMm": 230,
+      "widthMm": 150,
+      "heightMm": 32
+    },
+    {
+      "id": 2,
+      "bookId": 2,
+      "sku": "BH-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 420,
+      "lengthMm": 210,
+      "widthMm": 135,
+      "heightMm": 22
+    },
+    {
+      "id": 3,
+      "bookId": 1,
+      "sku": "STAR-EB-001",
+      "format": "Ebook",
+      "priceOverride": 14.99,
+      "weightGrams": 0,
+      "lengthMm": null,
+      "widthMm": null,
+      "heightMm": null
+    }
+  ],
+  "inventory": [
+    {
+      "skuId": 1,
+      "stock": 25,
+      "reserved": 2
+    },
+    {
+      "skuId": 2,
+      "stock": 60,
+      "reserved": 5
+    },
+    {
+      "skuId": 3,
+      "stock": 9999,
+      "reserved": 0
+    }
+  ],
+  "bookCategories": [
+    {
+      "bookId": 1,
+      "categoryId": 1,
+      "priority": 1
+    },
+    {
+      "bookId": 2,
+      "categoryId": 2,
+      "priority": 1
+    }
+  ],
+  "shoppingCarts": [
+    {
+      "id": 1,
+      "userId": 2,
+      "status": "ACTIVE",
+      "totalItems": 1,
+      "subtotal": 24.99
+    }
+  ],
+  "cartItems": [
+    {
+      "id": 1,
+      "cartId": 1,
+      "skuId": 1,
+      "quantity": 1,
+      "unitPrice": 24.99
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "userId": 2,
+      "cartId": 1,
+      "shippingAddressId": 5001,
+      "billingAddressId": 5002,
+      "totalAmount": 27.49,
+      "currency": "USD",
+      "status": "PAID",
+      "couponId": null,
+      "placedAt": "2024-01-18T09:30:00Z"
+    }
+  ],
+  "orderItems": [
+    {
+      "id": 1,
+      "orderId": 1,
+      "skuId": 1,
+      "bookId": 1,
+      "quantity": 1,
+      "unitPrice": 24.99,
+      "taxAmount": 2.50,
+      "discountAmount": 0
+    }
+  ]
+}

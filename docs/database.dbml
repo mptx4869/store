@@ -1,0 +1,299 @@
+//// Database schema for the bookstore thesis project
+//// Syntax compatible with dbdiagram.io
+
+//// Access Control & Identity
+table roles {
+  id bigint [pk, increment]
+  name varchar(50) [unique, not null]
+  description varchar(255)
+  created_at timestamp
+  updated_at timestamp
+}
+
+table users {
+  id bigint [pk, increment]
+  username varchar(100) [unique, not null]
+  email varchar(255) [unique, not null]
+  password_hash varchar(255) [not null]
+  role_id bigint [not null, ref: > roles.id]
+  status varchar(20) [default: 'ACTIVE']
+  created_at timestamp
+  updated_at timestamp
+}
+
+table user_profiles {
+  user_id bigint [pk, ref: > users.id]
+  full_name varchar(255)
+  phone varchar(20)
+  avatar_url varchar(500)
+  birth_date date
+  email_verified boolean [default: false]
+  last_login_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+table addresses {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  label varchar(100)
+  line1 varchar(255) [not null]
+  line2 varchar(255)
+  city varchar(100)
+  state varchar(100)
+  postal_code varchar(50)
+  country varchar(100)
+  phone varchar(20)
+  address_type varchar(20) [note: 'SHIPPING, BILLING']
+  is_default boolean [default: false]
+  created_at timestamp
+  updated_at timestamp
+}
+
+//// Catalog & Content
+table publishers {
+  id bigint [pk, increment]
+  name varchar(255) [unique, not null]
+  website varchar(500)
+  country varchar(100)
+  created_at timestamp
+  updated_at timestamp
+}
+
+table authors {
+  id bigint [pk, increment]
+  full_name varchar(255) [not null]
+  bio text
+  website varchar(500)
+  created_at timestamp
+  updated_at timestamp
+}
+
+table categories {
+  id bigint [pk, increment]
+  name varchar(100) [unique, not null]
+  description text
+  created_at timestamp
+  updated_at timestamp
+}
+
+table books {
+  id bigint [pk, increment]
+  title varchar(255) [not null]
+  subtitle varchar(255)
+  description text
+  language varchar(50)
+  pages int
+  publisher_id bigint [ref: > publishers.id]
+  published_date date
+  base_price decimal(10,2) [not null]
+  default_sku_id bigint [ref: > product_skus.id]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+}
+
+table book_authors {
+  book_id bigint [ref: > books.id]
+  author_id bigint [ref: > authors.id]
+  author_position int
+  contribution varchar(100)
+  created_at timestamp
+
+  Indexes {
+    (book_id, author_id) [pk]
+  }
+}
+
+table book_categories {
+  book_id bigint [ref: > books.id]
+  category_id bigint [ref: > categories.id]
+  priority int
+  created_at timestamp
+
+  Indexes {
+    (book_id, category_id) [pk]
+  }
+}
+
+table product_skus {
+  id bigint [pk, increment]
+  book_id bigint [not null, ref: > books.id]
+  sku varchar(100) [unique, not null]
+  format varchar(100) [note: 'HARDCOVER, PAPERBACK, EBOOK, AUDIO']
+  price_override decimal(10,2)
+  weight_grams int
+  length_mm int
+  width_mm int
+  height_mm int
+  created_at timestamp
+  updated_at timestamp
+}
+
+table inventory {
+  sku_id bigint [pk, ref: > product_skus.id]
+  stock int [not null]
+  reserved int [not null, default: 0]
+  last_updated timestamp
+}
+
+table book_media {
+  id bigint [pk, increment]
+  book_id bigint [not null, ref: > books.id]
+  media_type varchar(50) [not null, note: 'COVER, GALLERY, PREVIEW']
+  url varchar(1000) [not null]
+  alt_text varchar(255)
+  is_primary boolean [default: false]
+  created_at timestamp
+  updated_at timestamp
+}
+
+//// Merchandising & Pricing
+table coupons {
+  id bigint [pk, increment]
+  code varchar(100) [unique, not null]
+  description text
+  discount_percent int
+  discount_amount decimal(12,2)
+  usage_limit int
+  usage_count int [default: 0]
+  minimum_order_value decimal(12,2)
+  starts_at timestamp
+  ends_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+table price_history {
+  id bigint [pk, increment]
+  book_id bigint [ref: > books.id]
+  sku_id bigint [ref: > product_skus.id]
+  old_price decimal(10,2)
+  new_price decimal(10,2)
+  changed_by bigint [ref: > users.id]
+  changed_at timestamp [not null]
+}
+
+//// Customer Experience
+table wishlist_items {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  book_id bigint [not null, ref: > books.id]
+  added_at timestamp [not null]
+
+  Indexes {
+    (user_id, book_id) [unique]
+  }
+}
+
+table reviews {
+  id bigint [pk, increment]
+  book_id bigint [not null, ref: > books.id]
+  user_id bigint [not null, ref: > users.id]
+  rating int [not null]
+  title varchar(255)
+  comment text
+  status varchar(20) [default: 'PUBLISHED']
+  created_at timestamp
+  updated_at timestamp
+}
+
+//// Cart & Orders
+table shopping_carts {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  status varchar(20) [default: 'ACTIVE']
+  total_items int [default: 0]
+  subtotal decimal(12,2) [default: 0]
+  created_at timestamp
+  updated_at timestamp
+}
+
+table cart_items {
+  id bigint [pk, increment]
+  cart_id bigint [not null, ref: > shopping_carts.id]
+  sku_id bigint [not null, ref: > product_skus.id]
+  quantity int [not null]
+  unit_price decimal(10,2) [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (cart_id, sku_id) [unique]
+  }
+}
+
+table orders {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  cart_id bigint [ref: > shopping_carts.id]
+  shipping_address_id bigint [ref: > addresses.id]
+  billing_address_id bigint [ref: > addresses.id]
+  total_amount decimal(12,2) [not null]
+  currency varchar(10) [default: 'USD']
+  status varchar(30) [not null, note: 'PENDING, PAID, SHIPPED, COMPLETED, CANCELLED']
+  coupon_id bigint [ref: > coupons.id]
+  placed_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+table order_items {
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  sku_id bigint [not null, ref: > product_skus.id]
+  book_id bigint [not null, ref: > books.id]
+  quantity int [not null]
+  unit_price decimal(10,2) [not null]
+  tax_amount decimal(10,2)
+  discount_amount decimal(10,2)
+  created_at timestamp
+  updated_at timestamp
+}
+
+table order_status_history {
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  from_status varchar(30)
+  to_status varchar(30) [not null]
+  changed_by bigint [ref: > users.id]
+  note text
+  changed_at timestamp [not null]
+}
+
+table payments {
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  amount decimal(12,2) [not null]
+  currency varchar(10) [default: 'USD']
+  provider varchar(100)
+  transaction_id varchar(255)
+  status varchar(50) [not null, note: 'PENDING, AUTHORIZED, CAPTURED, FAILED, REFUNDED']
+  paid_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+//// Monitoring & Audit
+table user_activity_logs {
+  id bigint [pk, increment]
+  user_id bigint [ref: > users.id]
+  action varchar(255) [not null]
+  object_type varchar(100)
+  object_id bigint
+  metadata json
+  ip_address varchar(50)
+  user_agent text
+  created_at timestamp
+}
+
+table audit_logs {
+  id bigint [pk, increment]
+  actor_id bigint [ref: > users.id]
+  action varchar(100) [not null]
+  table_name varchar(100)
+  record_id bigint
+  change_summary json
+  created_at timestamp
+}
+

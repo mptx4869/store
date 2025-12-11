@@ -14,11 +14,19 @@ public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "category_id")
-    private Long categoryId;
+    private Long id;
 
     @Column(nullable = false, unique = true)
     private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    @Column(name = "updated_at", insertable = false)
+    private java.time.LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<BookCategory> bookCategories;

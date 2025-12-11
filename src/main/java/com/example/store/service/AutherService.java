@@ -1,21 +1,27 @@
 package com.example.store.service;
 
-import java.net.PasswordAuthentication;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.store.repository.UserRepository;
 import com.example.store.config.JwtConfig;
 import com.example.store.dto.LoginRequest;
 import com.example.store.dto.LoginResponse;
 import com.example.store.dto.RegisterRequest;
-import com.example.store.model.*;
-import com.example.store.exception.*;
+import com.example.store.exception.ConflictException;
+import com.example.store.exception.LoginException;
+import com.example.store.exception.ResourceNotFoundException;
+import com.example.store.model.Role;
+import com.example.store.model.User;
+import com.example.store.repository.RoleRepository;
+import com.example.store.repository.UserRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class AutherService {
@@ -31,6 +37,9 @@ public class AutherService {
 
     @Autowired
     private JwtConfig jwtConfig;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     public LoginResponse doLogin( LoginRequest loginRequest){
         
@@ -53,16 +62,17 @@ public class AutherService {
             return new LoginResponse(
                 principal.getUsername(),
                 "USER",
-                "jwtConfig.generateToken(principal)"
+                jwtConfig.generateToken(principal)
             );
 
         }catch(Exception ex){
             System.out.println("Login failed for user: " + loginRequest.getUsername() + " - " + ex.getMessage());
-            throw new LoginException("Login failed");
+            throw new LoginException(ex.getMessage());
         }
     }
 
     //register method
+    @Transactional
     public LoginResponse register(RegisterRequest registerRequest){
 
         if(userRepo.existsByUsername(registerRequest.getUsername())){
@@ -73,11 +83,17 @@ public class AutherService {
             throw new ConflictException("Email already exists");
         }
 
+        Long roleId = roleRepository.getIdByName(registerRequest.getRoleName())
+            .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
+
+        Role role = roleRepository.getReferenceById(roleId);
+
         User newUser = new User(
-            registerRequest.getUsername()
-            ,passwordEncoder.encode(registerRequest.getPassword())
-            ,registerRequest.getEmail()
-            ,registerRequest.getRole_id()
+            registerRequest.getUsername(),
+            passwordEncoder.encode(registerRequest.getPassword()),
+            registerRequest.getEmail(),
+            "ACTIVE",
+            role
         );
         userRepo.save(newUser);
 
@@ -85,7 +101,20 @@ public class AutherService {
 
     }  
 
+    @Transactional
     public void deleteUser(String userName){
-        userRepo.deleteByUsername(userName);
+        User user = userRepo.findByUsername(userName)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Authentication auth = 
+            SecurityContextHolder
+            .getContext()
+            .getAuthentication();
+
+        if (auth.getName().equals(userName)) {
+            userRepo.delete(user);
+        }else{
+            throw new LoginException("Unauthorized to delete this user");
+        }
+        
     }
 }

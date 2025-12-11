@@ -2,10 +2,7 @@ package com.example.store.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -14,7 +11,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,14 +20,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "orders")
+@Table(name = "cart_items")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class Order {
+public class CartItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,41 +35,22 @@ public class Order {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cart_id")
+    @JoinColumn(name = "cart_id", nullable = false)
     private ShoppingCart cart;
 
-    @Column(name = "shipping_address_id")
-    private Long shippingAddressId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sku_id", nullable = false)
+    private ProductSku productSku;
 
-    @Column(name = "billing_address_id")
-    private Long billingAddressId;
+    @Column(nullable = false)
+    private Integer quantity;
 
-    @Column(name = "total_amount", nullable = false)
-    private BigDecimal totalAmount;
-
-    @Column(length = 10)
-    private String currency;
-
-    @Column(length = 30, nullable = false)
-    private String status;
-
-    @Column(name = "coupon_id")
-    private Long couponId;
-
-    @Column(name = "placed_at")
-    private LocalDateTime placedAt;
+    @Column(name = "unit_price", nullable = false)
+    private BigDecimal unitPrice;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", insertable = false)
     private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private Set<OrderItem> orderItems = new HashSet<>();
 }

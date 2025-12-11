@@ -48,9 +48,8 @@ public class AppController {
     //register API
     @PostMapping("register")
     public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest registerRequest){
-        registerRequest.setRole_id(2); //default role is USER
-        
         LoginResponse loginResponse = autherService.register(registerRequest);
+        
         if(loginResponse != null){
             return ResponseEntity.created(null).body(loginResponse);
         }else{

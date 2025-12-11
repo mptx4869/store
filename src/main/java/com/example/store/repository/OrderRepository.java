@@ -1,0 +1,15 @@
+package com.example.store.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.example.store.model.Order;
+import com.example.store.model.User;
+
+public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    @EntityGraph(attributePaths = {"orderItems", "orderItems.book", "orderItems.productSku"})
+    Optional<Order> findByUserAndStatus(User user, String status);
+}

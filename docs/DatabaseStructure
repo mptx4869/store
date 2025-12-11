@@ -1,0 +1,238 @@
+Table roles {
+  id bigint [pk, increment]
+  name varchar(50) [unique, not null]
+}
+
+Table users {
+  id bigint [pk, increment]
+  username varchar(100) [unique, not null]
+  email varchar(255) [unique, not null]
+  password_hash varchar(255) [not null]
+  full_name varchar(255)
+  phone varchar(20)
+  role_id bigint
+  email_verified boolean
+  last_login_at datetime
+  created_at datetime
+  updated_at datetime
+  deleted_at datetime
+}
+
+Table addresses {
+  id bigint [pk, increment]
+  user_id bigint
+  label varchar(100)
+  line1 varchar(255)
+  line2 varchar(255)
+  city varchar(100)
+  state varchar(100)
+  postal_code varchar(50)
+  country varchar(100)
+  phone varchar(20)
+  is_default boolean
+  created_at datetime
+}
+
+Table publishers {
+  id bigint [pk, increment]
+  name varchar(255) [unique, not null]
+  website varchar(500)
+  created_at datetime
+}
+
+Table authors {
+  id bigint [pk, increment]
+  full_name varchar(255) [not null]
+  bio text
+  created_at datetime
+}
+
+Table books {
+  id bigint [pk, increment]
+  title varchar(255) [not null]
+  subtitle varchar(255)
+  description text
+  price decimal(10,2) [not null]
+  isbn varchar(50) [unique]
+  language varchar(50)
+  pages int
+  publisher_id bigint
+  published_date date
+  default_sku_id bigint
+  created_at datetime
+  updated_at datetime
+  deleted_at datetime
+}
+
+Table book_authors {
+  book_id bigint
+  author_id bigint
+  author_position int
+  Indexes {
+    (book_id, author_id) [pk]
+  }
+}
+
+Table categories {
+  id bigint [pk, increment]
+  name varchar(100) [unique, not null]
+  description text
+  created_at datetime
+}
+
+Table book_categories {
+  book_id bigint
+  category_id bigint
+  priority int
+  Indexes {
+    (book_id, category_id) [pk]
+  }
+}
+
+Table media {
+  id bigint [pk, increment]
+  owner_table varchar(100)
+  owner_id bigint
+  url varchar(1000) [not null]
+  type varchar(50)
+  alt_text varchar(255)
+  is_primary boolean
+  created_at datetime
+}
+
+Table product_skus {
+  id bigint [pk, increment]
+  book_id bigint [not null]
+  sku varchar(100) [unique, not null]
+  format varchar(100)
+  price_override decimal(10,2)
+  weight_grams int
+  length_mm int
+  width_mm int
+  height_mm int
+  created_at datetime
+}
+
+Table inventory {
+  sku_id bigint [pk]
+  stock int
+  reserved int
+  last_updated datetime
+}
+
+Table orders {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  shipping_address_id bigint
+  billing_address_id bigint
+  total_amount decimal(12,2) [not null]
+  currency varchar(10)
+  status varchar(30)
+  created_at datetime
+  updated_at datetime
+  deleted_at datetime
+}
+
+Table order_items {
+  id bigint [pk, increment]
+  order_id bigint [not null]
+  book_id bigint [not null]
+  sku_id bigint [not null]
+  quantity int [not null]
+  unit_price decimal(10,2) [not null]
+  tax_amount decimal(10,2)
+  discount_amount decimal(10,2)
+  created_at datetime
+}
+
+Table order_status_history {
+  id bigint [pk, increment]
+  changed_by bigint
+  from_status varchar(50)
+  to_status varchar(50)
+  order_id bigint [not null]
+  note text
+  created_at datetime
+}
+
+Table payments {
+  id bigint [pk, increment]
+  order_id bigint [not null]
+  amount decimal(12,2) [not null]
+  currency varchar(10)
+  provider varchar(100)
+  transaction_id varchar(255)
+  status varchar(50)
+  paid_at datetime
+  created_at datetime
+}
+
+Table reviews {
+  id bigint [pk, increment]
+  book_id bigint [not null]
+  user_id bigint [not null]
+  rating int
+  comment text
+  is_moderated boolean
+  status varchar(20)
+  created_at datetime
+}
+
+Table user_activity_logs {
+  id bigint [pk, increment]
+  user_id bigint
+  action varchar(255)
+  object_type varchar(100)
+  object_id bigint
+  ip_address varchar(50)
+  user_agent text
+  created_at datetime
+}
+
+Table coupons {
+  id bigint [pk, increment]
+  code varchar(100) [unique, not null]
+  description text
+  discount_percent int
+  discount_amount decimal(12,2)
+  valid_from datetime
+  valid_to datetime
+  usage_limit int
+  created_at datetime
+}
+
+Table price_history {
+  id bigint [pk, increment]
+  changed_by bigint
+  book_id bigint [not null]
+  sku_id bigint
+  old_price decimal(10,2)
+  new_price decimal(10,2)
+  changed_at datetime
+}
+
+Ref: users.role_id > roles.id
+Ref: addresses.user_id > users.id
+Ref: books.publisher_id > publishers.id
+Ref: book_authors.book_id > books.id
+Ref: book_authors.author_id > authors.id
+Ref: book_categories.book_id > books.id
+Ref: book_categories.category_id > categories.id
+Ref: media.owner_id > books.id
+Ref: product_skus.book_id > books.id
+Ref: inventory.sku_id > product_skus.id
+Ref: orders.user_id > users.id
+Ref: orders.shipping_address_id > addresses.id
+Ref: orders.billing_address_id > addresses.id
+Ref: order_items.order_id > orders.id
+Ref: order_items.sku_id > product_skus.id
+Ref: order_items.book_id > books.id
+Ref: order_status_history.order_id > orders.id
+Ref: order_status_history.changed_by > users.id
+Ref: payments.order_id > orders.id
+Ref: reviews.book_id > books.id
+Ref: reviews.user_id > users.id
+Ref: user_activity_logs.user_id > users.id
+Ref: price_history.book_id > books.id
+Ref: price_history.sku_id > product_skus.id
+Ref: price_history.changed_by > users.id

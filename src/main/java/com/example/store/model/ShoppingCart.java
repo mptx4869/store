@@ -1,10 +1,9 @@
 package com.example.store.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
-
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -25,53 +24,43 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "users")
+@Table(name = "shopping_carts")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class User {
+public class ShoppingCart {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String username;
-
-    @Column(name = "email", nullable = false, unique = true, length = 255)
-    private String email;
-
-    @Column(name = "password_hash", nullable = false, length = 255)
-    private String passwordHash;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "role_id", nullable = false)
-    private Role role;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(length = 20)
+    @Column(length = 20, nullable = false)
     @Builder.Default
     private String status = "ACTIVE";
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "total_items")
+    @Builder.Default
+    private Integer totalItems = 0;
+
+    @Column(name = "subtotal", nullable = false)
+    @Builder.Default
+    private BigDecimal subtotal = BigDecimal.ZERO;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", insertable = false)
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Order> orders;
-
-    public User(String username, String encodedPassword, String email, String status, Role role) {
-        this.username = username;
-        this.passwordHash = encodedPassword;
-        this.email = email;
-        this.status = status;
-        this.role = role;
-    }
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<CartItem> items = new HashSet<>();
 }

@@ -19,20 +19,26 @@ public class UserDetailConfig  implements UserDetailsService{
     
     @Override
     public UserDetails loadUserByUsername(String username) throws LoginException {
-        com.example.store.model.User user ;
-        if(username.contains("@")) {
-            user = userRepo.findByEmail(username);
-        }else
-            user = userRepo.findByUsername(username);
-        
-        if(user == null){
+        com.example.store.model.User user = username.contains("@")
+            ? userRepo.findByEmail(username).orElse(null)
+            : userRepo.findByUsername(username).orElse(null);
+
+        if (user == null) {
             throw new LoginException("Wrong username");
         }
 
+        if( !user.getStatus().equals("ACTIVE")){
+            throw new LoginException("User is not active");
+        }
+            
+        String roleName = user.getRole() != null
+            ? user.getRole().getName()
+            : roleRepo.findByName("CUSTOMER").map(com.example.store.model.Role::getName).orElse("CUSTOMER");
+
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getUsername())
-                .password(user.getPassword())
-                .roles(roleRepo.findById(user.getRole_id()).getName())
+                .password(user.getPasswordHash())
+                .roles(roleName)
                 .build();
     }
 

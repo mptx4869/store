@@ -1,13 +1,10 @@
 package com.example.store.repository;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import com.example.store.model.Book;
 
-import org.springframework.data.repository.Repository;
+public interface BookRepository extends JpaRepository<Book, Long> {
 
-public interface BookRepository extends Repository <Book, Long> {
-    
-    Book save(Book book);
-    Book findById(Long bookId);
-    void deleteById(Long bookId);
-    
+    boolean existsByTitle(String title);
 }
