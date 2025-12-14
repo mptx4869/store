@@ -24,6 +24,8 @@ import java.util.Map;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.example.store.SetUpTest;
+
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class AutherTest {
@@ -41,9 +43,13 @@ public class AutherTest {
 
     private Role customerRole;
 
+    @Autowired
+    SetUpTest setUpTest;
+
     @BeforeEach
     void setUp() {
         // ensure deterministic IDs for roles and users for each test
+        setUpTest.setUp();
         userRepository.deleteAll();
         roleRepository.deleteAll();
 

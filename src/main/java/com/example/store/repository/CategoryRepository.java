@@ -1,16 +1,10 @@
 package com.example.store.repository;
 
-import java.util.List;
-
-import org.springframework.data.repository.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.store.model.Category;
 
-public interface CategoryRepository extends Repository<Category, Long> {
-
-    Category save(Category category);
+public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Category findByName(String name);
-
-    List<Category> findAll();
 }

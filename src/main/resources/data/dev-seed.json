@@ -2,12 +2,12 @@
   "roles": [
     {
       "id": 1,
-      "name": "ROLE_ADMIN",
+      "name": "ADMIN",
       "description": "Administrator with full permissions"
     },
     {
       "id": 2,
-      "name": "ROLE_CUSTOMER",
+      "name": "CUSTOMER",
       "description": "Customer account for storefront"
     }
   ],
@@ -16,7 +16,7 @@
       "id": 1,
       "username": "admin",
       "email": "admin@example.com",
-      "passwordHash": "$2a$10$abcdefghijklmnopqrstuv",
+      "passwordHash": "$2a$10$EixZaYVK1fsbw1Zfbx3OP.eCwY0NU7XL8fDeihh5Z8SGvtQvE5e/",
       "roleId": 1,
       "status": "ACTIVE"
     },
@@ -25,6 +25,14 @@
       "username": "jane.doe",
       "email": "jane.doe@example.com",
       "passwordHash": "$2a$10$uvwxyzabcdefghijklmnopr",
+      "roleId": 2,
+      "status": "ACTIVE"
+    },
+    {
+      "id": 3,
+      "username": "nhanhoa",
+      "email": "nhanhoa@example.com",
+      "passwordHash": "$2a$10$w3yXnMMEZe7qVDye3GqXKuGqkdEYY5EYXPLk6l2b7xvFeoDyAJ6yK",
       "roleId": 2,
       "status": "ACTIVE"
     }

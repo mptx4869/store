@@ -19,6 +19,8 @@ import com.example.store.model.ProductSku;
 import com.example.store.repository.BookRepository;
 import com.example.store.repository.ProductSkuRepository;
 
+import com.example.store.SetUpTest;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class BookControllerTest {
 
@@ -31,10 +33,14 @@ class BookControllerTest {
     @Autowired
     private ProductSkuRepository productSkuRepository;
 
+    @Autowired 
+    SetUpTest setUpTest;
+
     private Long existingBookId;
 
     @BeforeEach
     void setUp() {
+        setUpTest.setUp();
         productSkuRepository.deleteAll();
         bookRepository.deleteAll();
         Book book = Book.builder()

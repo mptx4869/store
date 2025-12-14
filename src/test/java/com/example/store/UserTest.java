@@ -15,6 +15,7 @@ import com.example.store.repository.UserRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.store.SetUpTest;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class UserTest {
     @Autowired
@@ -22,11 +23,15 @@ public class UserTest {
 
     @Autowired
     RoleRepository roleRepository;
+    
+    @Autowired
+    SetUpTest setUpTest;
 
     private Role customerRole;
 
     @BeforeEach
     void setUp() {
+        setUpTest.setUp();
         userRepository.deleteAll();
         roleRepository.deleteAll();
 
@@ -52,7 +57,7 @@ public class UserTest {
         User user = userRepository.findByUsername("nhanhoa").orElse(null);
         assertThat(user).isNotNull();
         assertThat(user.getRole()).isNotNull();
-        assertThat(user.getRole().getName()).isEqualTo("ROLE_CUSTOMER");
+        assertThat(user.getRole().getName()).isEqualTo("CUSTOMER");
     }
    
 

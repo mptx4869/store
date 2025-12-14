@@ -46,9 +46,9 @@ import com.example.store.repository.UserRepository;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-// @Component
-// @Profile("dev")
-// @Transactional
+@Component
+@Profile("dev")
+@Transactional
 public class DevSeedDataLoader implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevSeedDataLoader.class);
@@ -223,7 +223,6 @@ public class DevSeedDataLoader implements CommandLineRunner {
             book.setDescription(seed.description());
             book.setLanguage(seed.language());
             book.setPages(seed.pages());
-            book.setPublisherId(seed.publisherId());
             book.setPublishedDate(seed.publishedDate());
             book.setBasePrice(seed.basePrice() != null ? seed.basePrice() : BigDecimal.ZERO);
             Book saved = bookRepository.save(book);

@@ -59,6 +59,38 @@ BEFORE UPDATE ON categories
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ---------------------------
+-- Table: publishers
+-- ---------------------------
+CREATE TABLE publishers (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    website VARCHAR(500),
+    country VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER trg_publishers_updated_at
+BEFORE UPDATE ON publishers
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: authors
+-- ---------------------------
+CREATE TABLE authors (
+    id BIGSERIAL PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    bio TEXT,
+    website VARCHAR(500),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER trg_authors_updated_at
+BEFORE UPDATE ON authors
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
 -- Table: books
 -- ---------------------------
 CREATE TABLE books (
@@ -74,7 +106,8 @@ CREATE TABLE books (
     default_sku_id BIGINT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT fk_books_publisher FOREIGN KEY (publisher_id) REFERENCES publishers(id)
 );
 
 CREATE TRIGGER trg_books_updated_at
@@ -126,6 +159,64 @@ CREATE TABLE book_categories (
     CONSTRAINT fk_book_categories_book FOREIGN KEY (book_id) REFERENCES books(id),
     CONSTRAINT fk_book_categories_category FOREIGN KEY (category_id) REFERENCES categories(id)
 );
+
+-- ---------------------------
+-- Table: book_authors (junction)
+-- ---------------------------
+CREATE TABLE book_authors (
+    book_id BIGINT NOT NULL,
+    author_id BIGINT NOT NULL,
+    author_position INTEGER,
+    contribution VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (book_id, author_id),
+    CONSTRAINT fk_book_authors_book FOREIGN KEY (book_id) REFERENCES books(id),
+    CONSTRAINT fk_book_authors_author FOREIGN KEY (author_id) REFERENCES authors(id)
+);
+
+-- ---------------------------
+-- Table: book_media
+-- ---------------------------
+CREATE TABLE book_media (
+    id BIGSERIAL PRIMARY KEY,
+    book_id BIGINT NOT NULL,
+    media_type VARCHAR(50) NOT NULL,
+    url VARCHAR(1000) NOT NULL,
+    alt_text VARCHAR(255),
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_book_media_book FOREIGN KEY (book_id) REFERENCES books(id)
+);
+
+CREATE TRIGGER trg_book_media_updated_at
+BEFORE UPDATE ON book_media
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---------------------------
+-- Table: addresses
+-- ---------------------------
+CREATE TABLE addresses (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    label VARCHAR(100),
+    line1 VARCHAR(255) NOT NULL,
+    line2 VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(100),
+    postal_code VARCHAR(50),
+    country VARCHAR(100),
+    phone VARCHAR(20),
+    address_type VARCHAR(20),
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_addresses_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TRIGGER trg_addresses_updated_at
+BEFORE UPDATE ON addresses
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ---------------------------
 -- Table: shopping_carts

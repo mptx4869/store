@@ -3,7 +3,6 @@ package com.example.store;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -15,13 +14,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.store.dto.CartItemRequest;
 import com.example.store.dto.LoginRequest;
+import com.example.store.dto.OrderCreateRequest;
+import com.example.store.dto.OrderResponse;
 import com.example.store.model.Book;
+import com.example.store.model.ProductSku;
 import com.example.store.model.Role;
 import com.example.store.model.User;
-import com.example.store.model.ProductSku;
 import com.example.store.repository.AuthorRepository;
 import com.example.store.repository.BookAuthorRepository;
 import com.example.store.repository.BookCategoryRepository;
@@ -37,11 +39,10 @@ import com.example.store.repository.PublisherRepository;
 import com.example.store.repository.RoleRepository;
 import com.example.store.repository.ShoppingCartRepository;
 import com.example.store.repository.UserRepository;
-
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.example.store.SetUpTest;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class CartControllerTest {
+class OrderControllerTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -94,31 +95,15 @@ class CartControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired 
+    private SetUpTest setUpTest;
+
     private Long bookId;
+    private Long userId;
 
     @BeforeEach
     void setUp() {
-        // Clean up graph respecting foreign keys
-        orderItemRepository.deleteAllInBatch();
-        orderRepository.deleteAllInBatch();
-        cartItemRepository.deleteAllInBatch();
-        shoppingCartRepository.deleteAllInBatch();
-        inventoryRepository.deleteAllInBatch();
-        bookMediaRepository.deleteAllInBatch();
-        bookAuthorRepository.deleteAllInBatch();
-        bookCategoryRepository.deleteAllInBatch();
-        productSkuRepository.deleteAllInBatch();
-        bookRepository.deleteAllInBatch();
-        categoryRepository.deleteAllInBatch();
-        authorRepository.deleteAllInBatch();
-        publisherRepository.deleteAllInBatch();
-        userRepository.deleteAllInBatch();
-        roleRepository.deleteAllInBatch();
-
-    // Create user and role
-        Role adminRole = new Role();
-        adminRole.setName("ADMIN");
-        roleRepository.save(adminRole);
+        setUpTest.setUp();
 
         Role customerRole = new Role();
         customerRole.setName("CUSTOMER");
@@ -131,22 +116,21 @@ class CartControllerTest {
             .role(customerRole)
             .status("ACTIVE")
             .build();
-        userRepository.save(baseUser);
-    // Create a book with a default SKU
+        userId = userRepository.save(baseUser).getId();
 
         Book book = Book.builder()
-            .title("Cart Book")
-            .description("Book for cart testing")
+            .title("Order Book")
+            .description("Book for order testing")
             .language("EN")
-            .pages(280)
-            .publishedDate(java.time.LocalDate.of(2021, 5, 15))
+            .pages(220)
+            .publishedDate(java.time.LocalDate.of(2020, 1, 10))
             .basePrice(new BigDecimal("20.00"))
             .build();
         book = bookRepository.save(book);
 
         ProductSku sku = productSkuRepository.save(ProductSku.builder()
             .book(book)
-            .sku("CART-SKU")
+            .sku("ORDER-SKU")
             .format("PAPERBACK")
             .priceOverride(new BigDecimal("20.00"))
             .build());
@@ -157,48 +141,47 @@ class CartControllerTest {
     }
 
     @Test
-    void shouldAddItemToCart() {
+    void shouldCreateOrderAndReturnHistory() {
         String token = loginAndGetToken();
 
-        RequestEntity<CartItemRequest> request = RequestEntity
-            .post("/cart/items")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-            .body(new CartItemRequest(bookId, 2));
+        addItemToCart(token, 2);
 
-        ResponseEntity<Map> response = restTemplate.exchange(request, Map.class);
+        ResponseEntity<OrderResponse> createResponse = restTemplate.exchange(
+            RequestEntity.post("/orders")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(new OrderCreateRequest(null, null, null)),
+            OrderResponse.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().get("cartId")).isNotNull();
+        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        OrderResponse createdOrder = createResponse.getBody();
+        assertThat(createdOrder).isNotNull();
+        assertThat(createdOrder.getItems()).hasSize(1);
+        assertThat(createdOrder.getItems().get(0).getQuantity()).isEqualTo(2);
+        assertThat(createdOrder.getTotalAmount()).isEqualByComparingTo(new BigDecimal("40.00"));
+        assertThat(createdOrder.getStatus()).isEqualTo("PLACED");
 
-        List<Map<String, Object>> items = (List<Map<String, Object>>) response.getBody().get("items");
-        assertThat(items).hasSize(1);
-        assertThat(items.get(0).get("quantity")).isEqualTo(2);
-        assertThat(response.getBody().get("totalItems")).isEqualTo(2);
+        ResponseEntity<OrderResponse[]> historyResponse = restTemplate.exchange(
+            RequestEntity.get("/orders")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .build(),
+            OrderResponse[].class);
+
+        assertThat(historyResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        OrderResponse[] history = historyResponse.getBody();
+        assertThat(history).isNotNull();
+        assertThat(history).hasSize(1);
+        assertThat(history[0].getOrderId()).isEqualTo(createdOrder.getOrderId());
+
+        assertThat(shoppingCartRepository.findByUserIdAndStatus(userId, "ACTIVE")).isEmpty();
     }
 
-    @Test
-    void shouldIncrementQuantityWhenAddingExistingItem() {
-        String token = loginAndGetToken();
-
-        RequestEntity<CartItemRequest> firstRequest = RequestEntity
-            .post("/cart/items")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-            .body(new CartItemRequest(bookId, 1));
-        restTemplate.exchange(firstRequest, Map.class);
-
-        RequestEntity<CartItemRequest> secondRequest = RequestEntity
-            .post("/cart/items")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-            .body(new CartItemRequest(bookId, 3));
-
-        ResponseEntity<Map> response = restTemplate.exchange(secondRequest, Map.class);
-
+    private void addItemToCart(String token, int quantity) {
+        ResponseEntity<Map> response = restTemplate.exchange(
+            RequestEntity.post("/cart/items")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(new CartItemRequest(bookId, quantity)),
+            Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        List<Map<String, Object>> items = (List<Map<String, Object>>) response.getBody().get("items");
-        assertThat(items).hasSize(1);
-        assertThat(items.get(0).get("quantity")).isEqualTo(4);
-        assertThat(response.getBody().get("totalItems")).isEqualTo(4);
     }
 
     private String loginAndGetToken() {

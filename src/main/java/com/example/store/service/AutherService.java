@@ -43,7 +43,7 @@ public class AutherService {
 
     public LoginResponse doLogin( LoginRequest loginRequest){
         
-        System.out.println("Attempting login for user: " + loginRequest.getUsername());
+        System.out.println("Attempting login for user: " + loginRequest.getUsername() + "pass:" + loginRequest.getPassword());
 
        
         try{
