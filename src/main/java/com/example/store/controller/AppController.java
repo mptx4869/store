@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,6 +59,7 @@ public class AppController {
     }
 
     @DeleteMapping("user/{userName}")
+    @PreAuthorize("hasRole('ADMIN') or #userName == authentication.principal.username")
     public ResponseEntity<Void> deleteUser(@PathVariable String userName){
         autherService.deleteUser(userName);
         return ResponseEntity.noContent().build();

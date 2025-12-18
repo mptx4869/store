@@ -390,8 +390,10 @@ public class DevSeedDataLoader implements CommandLineRunner {
             Order order = optional.orElseGet(() -> Order.builder().user(user).status(seed.status()).build());
             order.setUser(user);
             order.setCart(cart);
-            order.setShippingAddressId(seed.shippingAddressId());
-            order.setBillingAddressId(seed.billingAddressId());
+            order.setShippingAddress(seed.shippingAddress());
+            order.setShippingPhone(seed.shippingPhone());
+            order.setBillingAddress(seed.billingAddress());
+            order.setBillingPhone(seed.billingPhone());
             order.setTotalAmount(seed.totalAmount() != null ? seed.totalAmount() : BigDecimal.ZERO);
             order.setCurrency(seed.currency());
             order.setStatus(seed.status());
@@ -484,7 +486,8 @@ public class DevSeedDataLoader implements CommandLineRunner {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-        private record SeedOrder(Long id, Long userId, Long cartId, Long shippingAddressId, Long billingAddressId,
+        private record SeedOrder(Long id, Long userId, Long cartId, 
+            String shippingAddress, String shippingPhone, String billingAddress, String billingPhone,
             BigDecimal totalAmount, String currency, String status, Long couponId, OffsetDateTime placedAt) {
     }
 

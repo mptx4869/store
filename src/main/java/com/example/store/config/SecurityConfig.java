@@ -18,8 +18,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 @Configuration
+@EnableMethodSecurity
 //@EnableWebSecurity
 public class SecurityConfig {
 
@@ -75,7 +77,7 @@ public class SecurityConfig {
             "http://localhost:5173",
             "http://localhost:3000"
         ));
-        config.setAllowedMethods(Arrays. asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(Arrays. asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(Arrays.asList("*"));
         config. setAllowCredentials(true);
         config.setMaxAge(3600L);

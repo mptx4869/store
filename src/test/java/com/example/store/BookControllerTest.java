@@ -86,6 +86,9 @@ class BookControllerTest {
         ResponseEntity<Map> response = restTemplate.getForEntity("/books/{id}", Map.class, 9999);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(response.getBody()).containsEntry("error", "Book not found");
+        assertThat(response.getBody())
+            .containsEntry("error", "Resource Not Found")
+            .containsEntry("message", "Book not found")
+            .containsEntry("code", "RESOURCE_NOT_FOUND");
     }
 }

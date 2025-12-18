@@ -33,6 +33,15 @@ import lombok.Setter;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Order {
 
+    // Order status constants
+    public static final String STATUS_PLACED = "PLACED";
+    public static final String STATUS_CONFIRMED = "CONFIRMED";
+    public static final String STATUS_PROCESSING = "PROCESSING";
+    public static final String STATUS_SHIPPED = "SHIPPED";
+    public static final String STATUS_DELIVERED = "DELIVERED";
+    public static final String STATUS_CANCELLED = "CANCELLED";
+    public static final String STATUS_RETURNED = "RETURNED";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
@@ -46,11 +55,17 @@ public class Order {
     @JoinColumn(name = "cart_id")
     private ShoppingCart cart;
 
-    @Column(name = "shipping_address_id")
-    private Long shippingAddressId;
+    @Column(name = "shipping_address", length = 500)
+    private String shippingAddress;
 
-    @Column(name = "billing_address_id")
-    private Long billingAddressId;
+    @Column(name = "shipping_phone", length = 20)
+    private String shippingPhone;
+
+    @Column(name = "billing_address", length = 500)
+    private String billingAddress;
+
+    @Column(name = "billing_phone", length = 20)
+    private String billingPhone;
 
     @Column(name = "total_amount", nullable = false)
     private BigDecimal totalAmount;
@@ -76,4 +91,27 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<OrderItem> orderItems = new HashSet<>();
+
+    /**
+     * Check if order can be cancelled
+     */
+    public boolean isCancellable() {
+        return STATUS_PLACED.equals(status) || STATUS_CONFIRMED.equals(status);
+    }
+
+    /**
+     * Check if order is in a final state
+     */
+    public boolean isFinalState() {
+        return STATUS_DELIVERED.equals(status) || 
+               STATUS_CANCELLED.equals(status) || 
+               STATUS_RETURNED.equals(status);
+    }
+
+    /**
+     * Check if order is active (not cancelled/returned)
+     */
+    public boolean isActive() {
+        return !STATUS_CANCELLED.equals(status) && !STATUS_RETURNED.equals(status);
+    }
 }

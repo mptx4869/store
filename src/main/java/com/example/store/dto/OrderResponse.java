@@ -16,7 +16,9 @@ public class OrderResponse {
     BigDecimal totalAmount;
     LocalDateTime placedAt;
     Long cartId;
-    Long shippingAddressId;
-    Long billingAddressId;
+    String shippingAddress;
+    String shippingPhone;
+    String billingAddress;
+    String billingPhone;
     List<OrderItemResponse> items;
 }

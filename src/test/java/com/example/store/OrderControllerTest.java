@@ -95,8 +95,11 @@ class OrderControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Autowired 
+    @Autowired
     private SetUpTest setUpTest;
+
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     private Long bookId;
     private Long userId;
@@ -136,8 +139,14 @@ class OrderControllerTest {
             .build());
 
         book.setDefaultSkuId(sku.getId());
-        bookRepository.save(book);
+        book = bookRepository.save(book);
         bookId = book.getId();
+
+        // Create Inventory using JdbcTemplate to avoid JPA @MapsId issues
+        jdbcTemplate.update(
+            "INSERT INTO inventory (sku_id, stock, reserved, last_updated) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+            sku.getId(), 100, 0
+        );
     }
 
     @Test
@@ -149,7 +158,13 @@ class OrderControllerTest {
         ResponseEntity<OrderResponse> createResponse = restTemplate.exchange(
             RequestEntity.post("/orders")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .body(new OrderCreateRequest(null, null, null)),
+                .body(new OrderCreateRequest(
+                    "123 Main St, City, State, 12345",
+                    "+1234567890",
+                    null,
+                    null,
+                    null
+                )),
             OrderResponse.class);
 
         assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);

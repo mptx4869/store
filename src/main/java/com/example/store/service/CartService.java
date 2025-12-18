@@ -10,7 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.store.dto.CartItemRequest;
 import com.example.store.dto.CartItemResponse;
+import com.example.store.dto.CartItemUpdateRequest;
 import com.example.store.dto.CartResponse;
+import com.example.store.exception.ConflictException;
+import com.example.store.exception.InsufficientStockException;
 import com.example.store.exception.ResourceNotFoundException;
 import com.example.store.model.Book;
 import com.example.store.model.CartItem;
@@ -19,6 +22,7 @@ import com.example.store.model.ShoppingCart;
 import com.example.store.model.User;
 import com.example.store.repository.BookRepository;
 import com.example.store.repository.CartItemRepository;
+import com.example.store.repository.InventoryRepository;
 import com.example.store.repository.ProductSkuRepository;
 import com.example.store.repository.ShoppingCartRepository;
 import com.example.store.repository.UserRepository;
@@ -27,25 +31,39 @@ import com.example.store.repository.UserRepository;
 public class CartService {
 
     private static final String CART_STATUS = "ACTIVE";
+    private static final int MAX_QUANTITY_PER_ITEM = 99;
+    private static final int MAX_TOTAL_ITEMS = 100;
 
     private final ShoppingCartRepository shoppingCartRepository;
     private final CartItemRepository cartItemRepository;
     private final BookRepository bookRepository;
     private final ProductSkuRepository productSkuRepository;
     private final UserRepository userRepository;
+    private final InventoryRepository inventoryRepository;
 
     public CartService(
         ShoppingCartRepository shoppingCartRepository,
         CartItemRepository cartItemRepository,
         BookRepository bookRepository,
         ProductSkuRepository productSkuRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        InventoryRepository inventoryRepository
     ) {
         this.shoppingCartRepository = shoppingCartRepository;
         this.cartItemRepository = cartItemRepository;
         this.bookRepository = bookRepository;
         this.productSkuRepository = productSkuRepository;
         this.userRepository = userRepository;
+        this.inventoryRepository = inventoryRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public CartResponse getCartByUser(String username){
+        User user = fetchUser(username);
+        ShoppingCart cart = shoppingCartRepository.findByUserIdAndStatus(user.getId(), CART_STATUS)
+            .orElseThrow(() -> new ResourceNotFoundException("Shopping cart not found"));
+
+        return buildCartResponse(cart);
     }
 
     @Transactional
@@ -63,10 +81,17 @@ public class CartService {
 
         CartItem cartItem = cartItemRepository.findByCartAndProductSku(cart, productSku)
             .map(item -> {
-                item.setQuantity(item.getQuantity() + cartItemRequest.quantity());
+                int newQuantity = item.getQuantity() + cartItemRequest.quantity();
+                validateQuantity(newQuantity);
+                validateStock(productSku, newQuantity);
+                item.setQuantity(newQuantity);
                 return item;
             })
-            .orElseGet(() -> createCartItem(cart, book, productSku, cartItemRequest.quantity()));
+            .orElseGet(() -> {
+                validateQuantity(cartItemRequest.quantity());
+                validateStock(productSku, cartItemRequest.quantity());
+                return createCartItem(cart, book, productSku, cartItemRequest.quantity());
+            });
 
         boolean isNewItem = cartItem.getId() == null;
         if (isNewItem) {
@@ -86,6 +111,60 @@ public class CartService {
             cartItemRepository.save(cartItem);
         }
 
+        return buildCartResponse(cart);
+    }
+
+    @Transactional
+    public CartResponse updateCartItem(String username, Long itemId, CartItemUpdateRequest request) {
+        User user = fetchUser(username);
+        ShoppingCart cart = shoppingCartRepository.findByUserIdAndStatus(user.getId(), CART_STATUS)
+            .orElseThrow(() -> new ResourceNotFoundException("Shopping cart not found"));
+
+        CartItem cartItem = cartItemRepository.findById(itemId)
+            .filter(item -> item.getCart().getId().equals(cart.getId()))
+            .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
+
+        validateQuantity(request.quantity());
+        validateStock(cartItem.getProductSku(), request.quantity());
+        cartItem.setQuantity(request.quantity());
+        cartItemRepository.save(cartItem);
+
+        recalculateCartTotals(cart);
+        shoppingCartRepository.save(cart);
+
+        return buildCartResponse(cart);
+    }
+
+    @Transactional
+    public CartResponse removeCartItem(String username, Long itemId) {
+        User user = fetchUser(username);
+        ShoppingCart cart = shoppingCartRepository.findByUserIdAndStatus(user.getId(), CART_STATUS)
+            .orElseThrow(() -> new ResourceNotFoundException("Shopping cart not found"));
+
+        CartItem cartItem = cartItemRepository.findById(itemId)
+            .filter(item -> item.getCart().getId().equals(cart.getId()))
+            .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
+
+        cart.getItems().remove(cartItem);
+        cartItemRepository.delete(cartItem);
+
+        recalculateCartTotals(cart);
+        shoppingCartRepository.save(cart);
+        
+        return buildCartResponse(cart);
+    }
+
+    @Transactional
+    public CartResponse clearCart(String username) {
+        User user = fetchUser(username);
+        ShoppingCart cart = shoppingCartRepository.findByUserIdAndStatus(user.getId(), CART_STATUS)
+            .orElseThrow(() -> new ResourceNotFoundException("Shopping cart not found"));
+
+        cart.getItems().clear();
+        cart.setSubtotal(BigDecimal.ZERO);
+        cart.setTotalItems(0);
+        shoppingCartRepository.save(cart);
+        
         return buildCartResponse(cart);
     }
 
@@ -110,13 +189,24 @@ public class CartService {
 
     private CartResponse buildCartResponse(ShoppingCart cart) {
         List<CartItemResponse> items = cart.getItems().stream()
-            .map(item -> CartItemResponse.builder()
-                .bookId(item.getProductSku().getBook().getId())
-                .title(item.getProductSku().getBook().getTitle())
-                .sku(item.getProductSku().getSku())
-                .quantity(item.getQuantity())
-                .price(item.getUnitPrice())
-                .build())
+            .map(item -> {
+                BigDecimal originalPrice = item.getUnitPrice();
+                BigDecimal currentPrice = item.getProductSku().resolveCurrentPrice();
+                BigDecimal priceDiff = currentPrice.subtract(originalPrice);
+                boolean priceChanged = priceDiff.compareTo(BigDecimal.ZERO) != 0;
+                
+                return CartItemResponse.builder()
+                    .itemId(item.getId())
+                    .bookId(item.getProductSku().getBook().getId())
+                    .title(item.getProductSku().getBook().getTitle())
+                    .sku(item.getProductSku().getSku())
+                    .quantity(item.getQuantity())
+                    .price(currentPrice)
+                    .originalPrice(originalPrice)
+                    .priceChanged(priceChanged)
+                    .priceDiff(priceChanged ? priceDiff : null)
+                    .build();
+            })
             .toList();
 
         return CartResponse.builder()
@@ -149,5 +239,48 @@ public class CartService {
         }
         return productSkuRepository.findFirstByBookId(book.getId())
             .orElseThrow(() -> new ResourceNotFoundException("Product SKU not found for book"));
+    }
+
+    private void recalculateCartTotals(ShoppingCart cart) {
+        Set<CartItem> items = cart.getItems();
+        BigDecimal subtotal = items.stream()
+            .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        int totalItems = items.stream().mapToInt(CartItem::getQuantity).sum();
+        
+        if (totalItems > MAX_TOTAL_ITEMS) {
+            throw new ConflictException("Cart cannot exceed " + MAX_TOTAL_ITEMS + " total items");
+        }
+        
+        cart.setSubtotal(subtotal);
+        cart.setTotalItems(totalItems);
+    }
+
+    private void validateQuantity(int quantity) {
+        if (quantity < 1) {
+            throw new ConflictException("Quantity must be at least 1");
+        }
+        if (quantity > MAX_QUANTITY_PER_ITEM) {
+            throw new ConflictException("Quantity cannot exceed " + MAX_QUANTITY_PER_ITEM + " per item");
+        }
+    }
+
+    private void validateStock(ProductSku productSku, int requestedQuantity) {
+        var inventory = inventoryRepository.findByProductSkuId(productSku.getId())
+            .orElse(null);
+        
+        int availableStock = 0;
+        if (inventory != null) {
+            int totalStock = inventory.getStock() != null ? inventory.getStock() : 0;
+            int reserved = inventory.getReserved() != null ? inventory.getReserved() : 0;
+            availableStock = totalStock - reserved;
+        }
+        
+        if (availableStock < requestedQuantity) {
+            throw new InsufficientStockException(
+                "Insufficient stock for SKU " + productSku.getSku() + 
+                ". Available: " + availableStock + ", requested: " + requestedQuantity
+            );
+        }
     }
 }

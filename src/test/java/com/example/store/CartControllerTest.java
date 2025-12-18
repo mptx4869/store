@@ -19,24 +19,20 @@ import org.springframework.http.ResponseEntity;
 import com.example.store.dto.CartItemRequest;
 import com.example.store.dto.LoginRequest;
 import com.example.store.model.Book;
+import com.example.store.model.CartItem;
 import com.example.store.model.Role;
+import com.example.store.model.ShoppingCart;
 import com.example.store.model.User;
 import com.example.store.model.ProductSku;
-import com.example.store.repository.AuthorRepository;
-import com.example.store.repository.BookAuthorRepository;
-import com.example.store.repository.BookCategoryRepository;
-import com.example.store.repository.BookMediaRepository;
+
 import com.example.store.repository.BookRepository;
-import com.example.store.repository.CartItemRepository;
-import com.example.store.repository.CategoryRepository;
-import com.example.store.repository.InventoryRepository;
-import com.example.store.repository.OrderItemRepository;
-import com.example.store.repository.OrderRepository;
+
 import com.example.store.repository.ProductSkuRepository;
 import com.example.store.repository.PublisherRepository;
 import com.example.store.repository.RoleRepository;
 import com.example.store.repository.ShoppingCartRepository;
 import com.example.store.repository.UserRepository;
+import com.example.store.SetUpTest;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -53,39 +49,6 @@ class CartControllerTest {
     private ProductSkuRepository productSkuRepository;
 
     @Autowired
-    private ShoppingCartRepository shoppingCartRepository;
-
-    @Autowired
-    private CartItemRepository cartItemRepository;
-
-    @Autowired
-    private OrderItemRepository orderItemRepository;
-
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private InventoryRepository inventoryRepository;
-
-    @Autowired
-    private BookMediaRepository bookMediaRepository;
-
-    @Autowired
-    private BookAuthorRepository bookAuthorRepository;
-
-    @Autowired
-    private BookCategoryRepository bookCategoryRepository;
-
-    @Autowired
-    private CategoryRepository categoryRepository;
-
-    @Autowired
-    private AuthorRepository authorRepository;
-
-    @Autowired
-    private PublisherRepository publisherRepository;
-
-    @Autowired
     private RoleRepository roleRepository;
 
     @Autowired
@@ -94,26 +57,21 @@ class CartControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private SetUpTest setUpTest;
+
+    @Autowired
+    ShoppingCartRepository shoppingCartRepo;
+
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     private Long bookId;
 
     @BeforeEach
     void setUp() {
         // Clean up graph respecting foreign keys
-        orderItemRepository.deleteAllInBatch();
-        orderRepository.deleteAllInBatch();
-        cartItemRepository.deleteAllInBatch();
-        shoppingCartRepository.deleteAllInBatch();
-        inventoryRepository.deleteAllInBatch();
-        bookMediaRepository.deleteAllInBatch();
-        bookAuthorRepository.deleteAllInBatch();
-        bookCategoryRepository.deleteAllInBatch();
-        productSkuRepository.deleteAllInBatch();
-        bookRepository.deleteAllInBatch();
-        categoryRepository.deleteAllInBatch();
-        authorRepository.deleteAllInBatch();
-        publisherRepository.deleteAllInBatch();
-        userRepository.deleteAllInBatch();
-        roleRepository.deleteAllInBatch();
+        setUpTest.setUp();
 
     // Create user and role
         Role adminRole = new Role();
@@ -132,7 +90,7 @@ class CartControllerTest {
             .status("ACTIVE")
             .build();
         userRepository.save(baseUser);
-    // Create a book with a default SKU
+    // Create a book witikh a default SKU
 
         Book book = Book.builder()
             .title("Cart Book")
@@ -154,6 +112,12 @@ class CartControllerTest {
         book.setDefaultSkuId(sku.getId());
         bookRepository.save(book);
         bookId = book.getId();
+
+        // Create Inventory using JdbcTemplate to avoid JPA @MapsId issues
+        jdbcTemplate.update(
+            "INSERT INTO inventory (sku_id, stock, reserved, last_updated) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+            sku.getId(), 100, 0
+        );
     }
 
     @Test
@@ -199,6 +163,35 @@ class CartControllerTest {
         assertThat(items).hasSize(1);
         assertThat(items.get(0).get("quantity")).isEqualTo(4);
         assertThat(response.getBody().get("totalItems")).isEqualTo(4);
+    }
+
+    @Test
+    void shouldGetCartContents() {
+        String token = loginAndGetToken();
+
+        // Add item to cart first
+        RequestEntity<CartItemRequest> addItemRequest = RequestEntity
+            .post("/cart/items")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+            .body(new CartItemRequest(bookId, 2));
+        restTemplate.exchange(addItemRequest, Map.class);
+
+        // Now get the cart
+        RequestEntity<Void> getCartRequest = RequestEntity
+            .get("/cart")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+            .build();
+
+        ResponseEntity<Map> response = restTemplate.exchange(getCartRequest, Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("cartId")).isNotNull();
+
+        List<Map<String, Object>> items = (List<Map<String, Object>>) response.getBody().get("items");
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).get("quantity")).isEqualTo(2);
+        assertThat(response.getBody().get("totalItems")).isEqualTo(2);
     }
 
     private String loginAndGetToken() {
