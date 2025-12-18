@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -110,6 +111,45 @@ public class GlobalExceptionHandler {
             .error("Validation Failed")
             .message(validationErrors)
             .code("VALIDATION_ERROR")
+            .path(request.getDescription(false).replace("uri=", ""))
+            .build();
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Handle malformed JSON or invalid request body - 400
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, WebRequest request) {
+        log.warn("Invalid request body: {}", ex.getMessage());
+        
+        String message = "Invalid request body";
+        if (ex.getMessage() != null && ex.getMessage().contains("Cannot deserialize")) {
+            message = "Invalid JSON format or field values";
+        }
+        
+        ErrorResponse error = ErrorResponse.builder()
+            .error("Bad Request")
+            .message(message)
+            .code("INVALID_REQUEST_BODY")
+            .path(request.getDescription(false).replace("uri=", ""))
+            .build();
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Handle illegal argument exceptions - 400
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
+        log.warn("Illegal argument: {}", ex.getMessage());
+        
+        ErrorResponse error = ErrorResponse.builder()
+            .error("Bad Request")
+            .message(ex.getMessage())
+            .code("INVALID_ARGUMENT")
             .path(request.getDescription(false).replace("uri=", ""))
             .build();
         
