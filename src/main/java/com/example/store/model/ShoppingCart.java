@@ -2,8 +2,8 @@ package com.example.store.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -62,5 +62,5 @@ public class ShoppingCart {
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<CartItem> items = new HashSet<>();
+    private List<CartItem> items = new ArrayList<>();
 }

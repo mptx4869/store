@@ -1,9 +1,8 @@
 package com.example.store.service;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,7 +76,7 @@ public class CartService {
         ShoppingCart cart = shoppingCartRepository.findByUserIdAndStatus(user.getId(), CART_STATUS)
             .orElseGet(() -> createCart(user));
 
-        Set<CartItem> cartItems = ensureItemsInitialized(cart);
+        List<CartItem> cartItems = ensureItemsInitialized(cart);
 
         CartItem cartItem = cartItemRepository.findByCartAndProductSku(cart, productSku)
             .map(item -> {
@@ -172,7 +171,7 @@ public class CartService {
         ShoppingCart cart = ShoppingCart.builder()
             .user(user)
             .status(CART_STATUS)
-            .items(new HashSet<>())
+            .items(new ArrayList<>())
             .build();
         return shoppingCartRepository.save(cart);
     }
@@ -218,10 +217,10 @@ public class CartService {
             .build();
     }
 
-    private Set<CartItem> ensureItemsInitialized(ShoppingCart cart) {
-        Set<CartItem> items = cart.getItems();
+    private List<CartItem> ensureItemsInitialized(ShoppingCart cart) {
+        List<CartItem> items = cart.getItems();
         if (items == null) {
-            items = new HashSet<>();
+            items = new ArrayList<>();
             cart.setItems(items);
         }
         return items;
@@ -242,7 +241,7 @@ public class CartService {
     }
 
     private void recalculateCartTotals(ShoppingCart cart) {
-        Set<CartItem> items = cart.getItems();
+        List<CartItem> items = cart.getItems();
         BigDecimal subtotal = items.stream()
             .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);

@@ -3,7 +3,6 @@ package com.example.store.service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -32,7 +31,7 @@ public class OrderService {
 
     private static final String CART_STATUS_ACTIVE = "ACTIVE";
     private static final String CART_STATUS_COMPLETED = "COMPLETED";
-    private static final String DEFAULT_CURRENCY = "USD";
+    private static final String DEFAULT_CURRENCY = "VND";
 
     private final OrderRepository orderRepository;
     private final ShoppingCartRepository shoppingCartRepository;
@@ -57,7 +56,7 @@ public class OrderService {
         ShoppingCart cart = shoppingCartRepository.findByUserIdAndStatus(user.getId(), CART_STATUS_ACTIVE)
             .orElseThrow(() -> new ConflictException("No active cart available for checkout."));
 
-        Set<CartItem> cartItems = new HashSet<>(cart.getItems());
+        List<CartItem> cartItems = cart.getItems();
         if (cartItems.isEmpty()) {
             throw new ConflictException("Cannot create an order from an empty cart.");
         }
