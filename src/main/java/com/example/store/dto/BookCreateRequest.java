@@ -37,13 +37,16 @@ public class BookCreateRequest {
     @Positive(message = "Pages must be positive")
     private Integer pages;
     
-    private Long publisherId;
-    
     private LocalDate publishedDate;
+
+    @Size(max = 1000, message = "Image URL must not exceed 1000 characters")
+    private String imageUrl;
     
     @NotNull(message = "Base price is required")
     @Positive(message = "Base price must be positive")
     private BigDecimal basePrice;
+    
+    private List<Long> categoryIds;
     
     @NotEmpty(message = "At least one SKU is required")
     @Valid

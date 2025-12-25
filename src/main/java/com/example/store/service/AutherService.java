@@ -61,7 +61,7 @@ public class AutherService {
 
             return new LoginResponse(
                 principal.getUsername(),
-                "USER",
+                principal.getAuthorities().stream().findFirst().get().getAuthority(),
                 jwtConfig.generateToken(principal)
             );
 

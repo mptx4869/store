@@ -49,18 +49,35 @@ class BookControllerTest {
             .language("EN")
             .pages(200)
             .publishedDate(LocalDate.of(2020, 1, 1))
+            .imageUrl("https://cdn.example.com/test-book.jpg")
             .basePrice(new BigDecimal("15.50"))
             .build();
         book = bookRepository.save(book);
 
-        ProductSku sku = productSkuRepository.save(ProductSku.builder()
+        // Create multiple SKUs
+        ProductSku paperbackSku = productSkuRepository.save(ProductSku.builder()
             .book(book)
-            .sku("TEST-SKU")
-            .format("HARDCOVER")
+            .sku("TEST-SKU-PB")
+            .format("Paperback")
             .priceOverride(new BigDecimal("15.50"))
+            .weightGrams(300)
+            .lengthMm(200)
+            .widthMm(130)
+            .heightMm(15)
             .build());
 
-        book.setDefaultSkuId(sku.getId());
+        ProductSku hardcoverSku = productSkuRepository.save(ProductSku.builder()
+            .book(book)
+            .sku("TEST-SKU-HB")
+            .format("Hardcover")
+            .priceOverride(new BigDecimal("25.00"))
+            .weightGrams(500)
+            .lengthMm(210)
+            .widthMm(140)
+            .heightMm(20)
+            .build());
+
+        book.setDefaultSkuId(paperbackSku.getId());
         bookRepository.save(book);
         existingBookId = book.getId();
     }
@@ -78,7 +95,52 @@ class BookControllerTest {
         ResponseEntity<Map> response = restTemplate.getForEntity("/books/{id}", Map.class, existingBookId);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).containsEntry("title", "Test Book");
+        assertThat(response.getBody())
+            .containsEntry("title", "Test Book")
+            .containsEntry("imageUrl", "https://cdn.example.com/test-book.jpg");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldReturnAllSkusInBookResponse() {
+        ResponseEntity<Map> response = restTemplate.getForEntity("/books/{id}", Map.class, existingBookId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).containsKey("skus");
+        
+        var skus = (java.util.List<Map<String, Object>>) response.getBody().get("skus");
+        assertThat(skus).hasSize(2);
+        
+        // Verify Paperback SKU (default)
+        Map<String, Object> paperback = skus.stream()
+            .filter(s -> "TEST-SKU-PB".equals(s.get("sku")))
+            .findFirst()
+            .orElseThrow();
+        
+        assertThat(paperback)
+            .containsEntry("sku", "TEST-SKU-PB")
+            .containsEntry("format", "Paperback")
+            .containsEntry("price", 15.50)
+            .containsEntry("isDefault", true)
+            .containsEntry("inStock", false)
+            .containsEntry("availableStock", 0)
+            .containsEntry("weightGrams", 300)
+            .containsEntry("lengthMm", 200);
+        
+        // Verify Hardcover SKU
+        Map<String, Object> hardcover = skus.stream()
+            .filter(s -> "TEST-SKU-HB".equals(s.get("sku")))
+            .findFirst()
+            .orElseThrow();
+        
+        assertThat(hardcover)
+            .containsEntry("sku", "TEST-SKU-HB")
+            .containsEntry("format", "Hardcover")
+            .containsEntry("price", 25.00)
+            .containsEntry("isDefault", false)
+            .containsEntry("inStock", false)
+            .containsEntry("availableStock", 0)
+            .containsEntry("weightGrams", 500);
     }
 
     @Test

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.store.dto.AdminBookResponse;
 import com.example.store.dto.BookCreateRequest;
 import com.example.store.dto.BookUpdateRequest;
+import com.example.store.dto.SkuCreateRequest;
+import com.example.store.dto.SkuUpdateRequest;
 import com.example.store.service.AdminBookService;
 
 import jakarta.validation.Valid;
@@ -73,11 +76,52 @@ public class AdminBookController {
         return ResponseEntity.ok(book);
     }
 
+    @PatchMapping("/{bookId}/restore")
+    public ResponseEntity<AdminBookResponse> restoreBook(@PathVariable Long bookId) {
+        AdminBookResponse book = adminBookService.restoreBook(bookId);
+        return ResponseEntity.ok(book);
+    }
+
     @DeleteMapping("/{bookId}")
     public ResponseEntity<Void> deleteBook(
             @PathVariable Long bookId,
             @RequestParam(defaultValue = "false") boolean hard) {
         adminBookService.deleteBook(bookId, hard);
         return ResponseEntity.noContent().build();
+    }
+
+    // SKU Management
+    
+    @PostMapping("/{bookId}/skus")
+    public ResponseEntity<AdminBookResponse> addSku(
+            @PathVariable Long bookId,
+            @Valid @RequestBody SkuCreateRequest request) {
+        AdminBookResponse book = adminBookService.addSku(bookId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(book);
+    }
+
+    @PutMapping("/{bookId}/skus/{skuId}")
+    public ResponseEntity<AdminBookResponse> updateSku(
+            @PathVariable Long bookId,
+            @PathVariable Long skuId,
+            @Valid @RequestBody SkuUpdateRequest request) {
+        AdminBookResponse book = adminBookService.updateSku(bookId, skuId, request);
+        return ResponseEntity.ok(book);
+    }
+
+    @PatchMapping("/{bookId}/skus/{skuId}/set-default")
+    public ResponseEntity<AdminBookResponse> setDefaultSku(
+            @PathVariable Long bookId,
+            @PathVariable Long skuId) {
+        AdminBookResponse book = adminBookService.setDefaultSku(bookId, skuId);
+        return ResponseEntity.ok(book);
+    }
+
+    @DeleteMapping("/{bookId}/skus/{skuId}")
+    public ResponseEntity<AdminBookResponse> deleteSku(
+            @PathVariable Long bookId,
+            @PathVariable Long skuId) {
+        AdminBookResponse book = adminBookService.deleteSku(bookId, skuId);
+        return ResponseEntity.ok(book);
     }
 }

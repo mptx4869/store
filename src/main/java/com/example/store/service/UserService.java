@@ -38,14 +38,6 @@ public class UserService {
 
     // ==================== ADMIN USER MANAGEMENT ====================
 
-    /**
-     * Get all users with pagination and optional filtering
-     * 
-     * @param pageable Pagination parameters
-     * @param roleFilter Optional role filter (ADMIN/CUSTOMER)
-     * @param statusFilter Optional status filter (ACTIVE/INACTIVE)
-     * @return Page of users with summary information
-     */
     public Page<UserListResponse> getAllUsers(Pageable pageable, String roleFilter, String statusFilter) {
         Page<User> users;
         
@@ -66,13 +58,6 @@ public class UserService {
         return users.map(this::mapToUserListResponse);
     }
 
-    /**
-     * Get detailed user information by ID including order statistics
-     * 
-     * @param userId User ID
-     * @return Detailed user information
-     * @throws ResourceNotFoundException if user not found
-     */
     public UserDetailResponse getUserById(Long userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -80,15 +65,6 @@ public class UserService {
         return mapToUserDetailResponse(user);
     }
 
-    /**
-     * Update user status (ACTIVE/INACTIVE)
-     * 
-     * @param userId User ID
-     * @param status New status (ACTIVE or INACTIVE)
-     * @return Updated user information
-     * @throws ResourceNotFoundException if user not found
-     * @throws IllegalArgumentException if status is invalid
-     */
     @Transactional
     public UserListResponse updateUserStatus(Long userId, String status) {
         User user = userRepository.findById(userId)
@@ -105,14 +81,7 @@ public class UserService {
         return mapToUserListResponse(user);
     }
 
-    /**
-     * Update user role (ADMIN/CUSTOMER)
-     * 
-     * @param userId User ID
-     * @param roleName New role name (ADMIN or CUSTOMER)
-     * @return Updated user information
-     * @throws ResourceNotFoundException if user or role not found
-     */
+    
     @Transactional
     public UserListResponse updateUserRole(Long userId, String roleName) {
         User user = userRepository.findById(userId)

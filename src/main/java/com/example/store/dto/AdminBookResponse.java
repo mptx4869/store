@@ -22,16 +22,25 @@ public class AdminBookResponse {
     private String description;
     private String language;
     private Integer pages;
-    private String publisherName;
-    private Long publisherId;
     private LocalDate publishedDate;
+    private String imageUrl;
     private BigDecimal basePrice;
     private Long defaultSkuId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
     
+    private List<CategoryInfo> categories;
     private List<SkuInfo> skus;
+    
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CategoryInfo {
+        private Long id;
+        private String name;
+    }
     
     @Data
     @Builder

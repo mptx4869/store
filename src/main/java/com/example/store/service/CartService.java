@@ -68,10 +68,10 @@ public class CartService {
     @Transactional
     public CartResponse addItemToCart(String username, CartItemRequest cartItemRequest) {
         User user = fetchUser(username);
-        Book book = bookRepository.findById(cartItemRequest.bookId())
-            .orElseThrow(() -> new ResourceNotFoundException("Book not found"));
-
-        ProductSku productSku = resolveDefaultSku(book);
+        ProductSku productSku = productSkuRepository.findById(cartItemRequest.skuId())
+            .orElseThrow(() -> new ResourceNotFoundException("Product SKU not found"));
+        
+        Book book = productSku.getBook();
 
         ShoppingCart cart = shoppingCartRepository.findByUserIdAndStatus(user.getId(), CART_STATUS)
             .orElseGet(() -> createCart(user));

@@ -14,9 +14,9 @@
   "users": [
     {
       "id": 1,
-      "username": "adminn",
+      "username": "admin",
       "email": "admin@example.com",
-      "passwordHash": "$2a$10$EixZaYVK1fsbw1Zfbx3OP.eCwY0NU7XL8fDeihh5Z8SGvtQvE5e/",
+      "passwordHash": "admin123",
       "roleId": 1,
       "status": "ACTIVE"
     },
@@ -32,7 +32,7 @@
       "id": 3,
       "username": "nhanhoa",
       "email": "nhanhoa@example.com",
-      "passwordHash": "$2a$10$w3yXnMMEZe7qVDye3GqXKuGqkdEYY5EYXPLk6l2b7xvFeoDyAJ6yK",
+      "passwordHash": "nhanhoa123",
       "roleId": 2,
       "status": "ACTIVE"
     }
@@ -59,6 +59,7 @@
       "pages": 384,
       "publisherId": 1001,
       "publishedDate": "2023-05-16",
+      "imageUrl": "https://example.com/images/stars-beyond.jpg",
       "basePrice": 19.99,
       "defaultSkuId": 1
     },
@@ -71,6 +72,7 @@
       "pages": 256,
       "publisherId": 1002,
       "publishedDate": "2022-09-05",
+      "imageUrl": "https://example.com/images/better-habits.jpg",
       "basePrice": 15.50,
       "defaultSkuId": 2
     }

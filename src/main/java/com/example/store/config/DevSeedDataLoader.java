@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,6 +66,7 @@ public class DevSeedDataLoader implements CommandLineRunner {
     private final CartItemRepository cartItemRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("classpath:data/dev-seed.json")
     private Resource seedResource;
@@ -81,7 +83,8 @@ public class DevSeedDataLoader implements CommandLineRunner {
             ShoppingCartRepository shoppingCartRepository,
             CartItemRepository cartItemRepository,
             OrderRepository orderRepository,
-            OrderItemRepository orderItemRepository) {
+            OrderItemRepository orderItemRepository,
+            PasswordEncoder passwordEncoder) {
         this.objectMapper = objectMapper;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
@@ -94,6 +97,7 @@ public class DevSeedDataLoader implements CommandLineRunner {
         this.cartItemRepository = cartItemRepository;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -192,7 +196,7 @@ public class DevSeedDataLoader implements CommandLineRunner {
             User user = optional.orElseGet(User::new);
             user.setUsername(seed.username());
             user.setEmail(seed.email());
-            user.setPasswordHash(seed.passwordHash());
+            user.setPasswordHash(passwordEncoder.encode(seed.passwordHash()));
             user.setStatus(seed.status() != null ? seed.status() : "ACTIVE");
             Role role = roles.get(seed.roleId());
             if (role == null) {
@@ -224,6 +228,7 @@ public class DevSeedDataLoader implements CommandLineRunner {
             book.setLanguage(seed.language());
             book.setPages(seed.pages());
             book.setPublishedDate(seed.publishedDate());
+            book.setImageUrl(seed.imageUrl());
             book.setBasePrice(seed.basePrice() != null ? seed.basePrice() : BigDecimal.ZERO);
             Book saved = bookRepository.save(book);
             if (seed.id() != null) {
@@ -321,7 +326,6 @@ public class DevSeedDataLoader implements CommandLineRunner {
             BookCategory link = BookCategory.builder()
                     .book(book)
                     .category(category)
-                    .priority(seed.priority())
                     .createdAt(seed.createdAt())
                     .build();
             bookCategoryRepository.save(link);
@@ -460,8 +464,8 @@ public class DevSeedDataLoader implements CommandLineRunner {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record SeedBook(Long id, String title, String subtitle, String description, String language, Integer pages,
-            Long publisherId, LocalDate publishedDate, BigDecimal basePrice, Long defaultSkuId) {
+        private record SeedBook(Long id, String title, String subtitle, String description, String language, Integer pages,
+            Long publisherId, LocalDate publishedDate, String imageUrl, BigDecimal basePrice, Long defaultSkuId) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

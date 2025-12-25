@@ -1,6 +1,5 @@
 package com.example.store.config;
 
-import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties.Jwt;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,7 +34,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login", "/register","/","/h2-console/**", "/books/**").permitAll()
+                .requestMatchers("/login", "/register","/","/h2-console/**", "/books/**","/media/**").permitAll()
                 .anyRequest().authenticated()
             )
             .csrf(csrf -> csrf

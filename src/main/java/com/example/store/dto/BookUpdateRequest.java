@@ -2,6 +2,7 @@ package com.example.store.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -34,11 +35,14 @@ public class BookUpdateRequest {
     @Positive(message = "Pages must be positive")
     private Integer pages;
     
-    private Long publisherId;
-    
     private LocalDate publishedDate;
+
+    @Size(max = 1000, message = "Image URL must not exceed 1000 characters")
+    private String imageUrl;
     
     @NotNull(message = "Base price is required")
     @Positive(message = "Base price must be positive")
     private BigDecimal basePrice;
+    
+    private List<Long> categoryIds;
 }

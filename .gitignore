@@ -36,3 +36,14 @@ out/
 ### VS Code ###
 .vscode/
 docs/
+
+### File Uploads ###
+uploads/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.webp
+!**/src/test/resources/**/*.jpg
+!**/src/test/resources/**/*.png

@@ -66,7 +66,7 @@ class CartControllerTest {
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
-    private Long bookId;
+    private Long skuId;
 
     @BeforeEach
     void setUp() {
@@ -111,7 +111,7 @@ class CartControllerTest {
 
         book.setDefaultSkuId(sku.getId());
         bookRepository.save(book);
-        bookId = book.getId();
+        skuId = sku.getId();
 
         // Create Inventory using JdbcTemplate to avoid JPA @MapsId issues
         jdbcTemplate.update(
@@ -127,7 +127,7 @@ class CartControllerTest {
         RequestEntity<CartItemRequest> request = RequestEntity
             .post("/cart/items")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-            .body(new CartItemRequest(bookId, 2));
+            .body(new CartItemRequest(skuId, 2));
 
         ResponseEntity<Map> response = restTemplate.exchange(request, Map.class);
 
@@ -148,13 +148,13 @@ class CartControllerTest {
         RequestEntity<CartItemRequest> firstRequest = RequestEntity
             .post("/cart/items")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-            .body(new CartItemRequest(bookId, 1));
+            .body(new CartItemRequest(skuId, 1));
         restTemplate.exchange(firstRequest, Map.class);
 
         RequestEntity<CartItemRequest> secondRequest = RequestEntity
             .post("/cart/items")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-            .body(new CartItemRequest(bookId, 3));
+            .body(new CartItemRequest(skuId, 3));
 
         ResponseEntity<Map> response = restTemplate.exchange(secondRequest, Map.class);
 
@@ -173,7 +173,7 @@ class CartControllerTest {
         RequestEntity<CartItemRequest> addItemRequest = RequestEntity
             .post("/cart/items")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-            .body(new CartItemRequest(bookId, 2));
+            .body(new CartItemRequest(skuId, 2));
         restTemplate.exchange(addItemRequest, Map.class);
 
         // Now get the cart

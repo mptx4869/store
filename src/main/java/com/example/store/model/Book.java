@@ -12,9 +12,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -51,12 +48,11 @@ public class Book {
 
     private Integer pages;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "publisher_id")
-    private Publisher publisher;
-
     @Column(name = "published_date")
     private LocalDate publishedDate;
+
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
 
     @Column(name = "base_price", nullable = false)
     private BigDecimal basePrice;
@@ -85,7 +81,4 @@ public class Book {
     @Builder.Default
     private Set<BookAuthor> bookAuthors = new HashSet<>();
 
-    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private Set<BookMedia> media = new HashSet<>();
 }

@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS books (
   pages INT,
   publisher_id BIGINT,
   published_date DATE,
+  image_url VARCHAR(1000),
   base_price DECIMAL(12,2) NOT NULL,
   default_sku_id BIGINT,
   created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
@@ -120,7 +121,6 @@ CREATE TABLE IF NOT EXISTS inventory (
 CREATE TABLE IF NOT EXISTS book_categories (
   book_id BIGINT NOT NULL,
   category_id BIGINT NOT NULL,
-  priority INT,
   created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (book_id, category_id),
   CONSTRAINT fk_bc_book FOREIGN KEY (book_id) REFERENCES books(id),

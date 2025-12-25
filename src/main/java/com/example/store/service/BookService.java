@@ -39,6 +39,12 @@ public class BookService {
     private BookResponse mapToResponse(Book book) {
         ProductSku defaultSku = resolveDefaultSku(book);
         BigDecimal price = defaultSku != null ? defaultSku.resolveCurrentPrice() : book.getBasePrice();
+        
+        // Get all SKUs for this book
+        List<ProductSku> allSkus = productSkuRepository.findByBookId(book.getId());
+        List<BookResponse.SkuInfo> skuInfos = allSkus.stream()
+            .map(sku -> mapToSkuInfo(sku, book.getDefaultSkuId()))
+            .toList();
 
         return BookResponse.builder()
             .id(book.getId())
@@ -50,6 +56,32 @@ public class BookService {
             .pages(book.getPages())
             .price(price)
             .sku(defaultSku != null ? defaultSku.getSku() : null)
+            .imageUrl(book.getImageUrl())
+            .skus(skuInfos)
+            .build();
+    }
+    
+    private BookResponse.SkuInfo mapToSkuInfo(ProductSku sku, Long defaultSkuId) {
+        int availableStock = 0;
+        if (sku.getInventory() != null) {
+            availableStock = sku.getInventory().getStock() - sku.getInventory().getReserved();
+            availableStock = Math.max(0, availableStock); // Ensure non-negative
+        }
+        boolean inStock = availableStock > 0;
+        boolean isDefault = sku.getId().equals(defaultSkuId);
+        
+        return BookResponse.SkuInfo.builder()
+            .id(sku.getId())
+            .sku(sku.getSku())
+            .format(sku.getFormat())
+            .price(sku.resolveCurrentPrice())
+            .inStock(inStock)
+            .availableStock(availableStock)
+            .isDefault(isDefault)
+            .weightGrams(sku.getWeightGrams())
+            .lengthMm(sku.getLengthMm())
+            .widthMm(sku.getWidthMm())
+            .heightMm(sku.getHeightMm())
             .build();
     }
 

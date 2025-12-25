@@ -23,13 +23,14 @@ import com.example.store.dto.AdminBookResponse;
 import com.example.store.dto.BookCreateRequest;
 import com.example.store.dto.BookUpdateRequest;
 import com.example.store.dto.LoginRequest;
+import com.example.store.dto.SkuCreateRequest;
+import com.example.store.dto.SkuUpdateRequest;
 import com.example.store.model.Book;
 import com.example.store.model.Role;
 import com.example.store.model.User;
 import com.example.store.repository.BookRepository;
 import com.example.store.repository.InventoryRepository;
 import com.example.store.repository.ProductSkuRepository;
-import com.example.store.repository.PublisherRepository;
 import com.example.store.repository.RoleRepository;
 import com.example.store.repository.UserRepository;
 
@@ -55,9 +56,6 @@ class AdminBookControllerTest {
     private InventoryRepository inventoryRepository;
 
     @Autowired
-    private PublisherRepository publisherRepository;
-
-    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -69,7 +67,6 @@ class AdminBookControllerTest {
     private String adminToken;
     private String customerToken;
     private Long testBookId;
-    private Long testPublisherId;
 
     @BeforeEach
     void setUp() {
@@ -115,18 +112,11 @@ class AdminBookControllerTest {
         adminToken = getTokenForUser("admin", "admin123");
         customerToken = getTokenForUser("customer", "customer123");
 
-        // Create test publisher
+        // Create test book with SQL (no publisher)
         jdbcTemplate.update(
-                "INSERT INTO publishers (name, website, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                "Test Publisher", "https://testpublisher.com");
-        testPublisherId = jdbcTemplate.queryForObject("SELECT id FROM publishers WHERE name = 'Test Publisher'",
-                Long.class);
-
-        // Create test book with SQL
-        jdbcTemplate.update(
-                "INSERT INTO books (title, subtitle, description, language, pages, publisher_id, published_date, base_price, created_at, updated_at) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                "Test Book", "Test Subtitle", "Test Description", "EN", 300, testPublisherId,
+                "INSERT INTO books (title, subtitle, description, language, pages, published_date, base_price, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "Test Book", "Test Subtitle", "Test Description", "EN", 300,
                 LocalDate.of(2024, 1, 1), new BigDecimal("29.99"));
         testBookId = jdbcTemplate.queryForObject("SELECT id FROM books WHERE title = 'Test Book'", Long.class);
 
@@ -296,8 +286,8 @@ class AdminBookControllerTest {
                 .description("New Description")
                 .language("EN")
                 .pages(400)
-                .publisherId(testPublisherId)
                 .publishedDate(LocalDate.of(2024, 6, 1))
+                .imageUrl("https://cdn.example.com/new-book.jpg")
                 .basePrice(new BigDecimal("29.99"))
                 .skus(List.of(sku1, sku2))
                 .build();
@@ -314,6 +304,7 @@ class AdminBookControllerTest {
         assertThat(response.getBody().getTitle()).isEqualTo("New Book");
         assertThat(response.getBody().getSkus()).hasSize(2);
         assertThat(response.getBody().getDefaultSkuId()).isNotNull();
+        assertThat(response.getBody().getImageUrl()).isEqualTo("https://cdn.example.com/new-book.jpg");
 
         // Verify in database
         Book createdBook = bookRepository.findById(response.getBody().getId()).orElseThrow();
@@ -376,34 +367,6 @@ class AdminBookControllerTest {
     }
 
     @Test
-    void shouldRejectBookCreationWithInvalidPublisher() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(adminToken);
-        headers.set("Content-Type", "application/json");
-
-        BookCreateRequest.SkuCreateRequest sku = BookCreateRequest.SkuCreateRequest.builder()
-                .sku("INVALID-PUB-001")
-                .format("HARDCOVER")
-                .build();
-
-        BookCreateRequest request = BookCreateRequest.builder()
-                .title("Book with Invalid Publisher")
-                .publisherId(999999L) // Non-existent publisher
-                .basePrice(new BigDecimal("29.99"))
-                .skus(List.of(sku))
-                .build();
-
-        RequestEntity<BookCreateRequest> requestEntity = RequestEntity
-                .post("/admin/books")
-                .headers(headers)
-                .body(request);
-
-        ResponseEntity<String> response = restTemplate.exchange(requestEntity, String.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-    }
-
-    @Test
     void shouldDenyCustomerFromCreatingBook() {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(customerToken);
@@ -444,6 +407,7 @@ class AdminBookControllerTest {
                 .description("Updated Description")
                 .language("EN")
                 .pages(350)
+                .imageUrl("https://cdn.example.com/updated-book.jpg")
                 .basePrice(new BigDecimal("34.99"))
                 .build();
 
@@ -458,11 +422,13 @@ class AdminBookControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getTitle()).isEqualTo("Updated Book Title");
         assertThat(response.getBody().getBasePrice()).isEqualTo(new BigDecimal("34.99"));
+        assertThat(response.getBody().getImageUrl()).isEqualTo("https://cdn.example.com/updated-book.jpg");
 
         // Verify in database
         Book updatedBook = bookRepository.findById(testBookId).orElseThrow();
         assertThat(updatedBook.getTitle()).isEqualTo("Updated Book Title");
         assertThat(updatedBook.getBasePrice()).isEqualTo(new BigDecimal("34.99"));
+        assertThat(updatedBook.getImageUrl()).isEqualTo("https://cdn.example.com/updated-book.jpg");
     }
 
     @Test
@@ -528,6 +494,50 @@ class AdminBookControllerTest {
         assertThat(deletedBook.getDeletedAt()).isNotNull();
     }
 
+        @Test
+        void shouldRestoreSoftDeletedBook() {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBearerAuth(adminToken);
+
+                // Soft delete first
+                RequestEntity<Void> deleteRequest = RequestEntity
+                                .delete("/admin/books/" + testBookId)
+                                .headers(headers)
+                                .build();
+                ResponseEntity<Void> deleteResponse = restTemplate.exchange(deleteRequest, Void.class);
+                assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+                // Restore
+                RequestEntity<Void> restoreRequest = RequestEntity
+                                .patch("/admin/books/" + testBookId + "/restore")
+                                .headers(headers)
+                                .build();
+                ResponseEntity<AdminBookResponse> restoreResponse = restTemplate.exchange(restoreRequest, AdminBookResponse.class);
+
+                assertThat(restoreResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+                assertThat(restoreResponse.getBody()).isNotNull();
+                assertThat(restoreResponse.getBody().getDeletedAt()).isNull();
+
+                // Verify in database
+                Book restored = bookRepository.findById(testBookId).orElseThrow();
+                assertThat(restored.getDeletedAt()).isNull();
+        }
+
+        @Test
+        void shouldFailRestoreIfBookNotDeleted() {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBearerAuth(adminToken);
+
+                RequestEntity<Void> restoreRequest = RequestEntity
+                                .patch("/admin/books/" + testBookId + "/restore")
+                                .headers(headers)
+                                .build();
+
+                ResponseEntity<String> response = restTemplate.exchange(restoreRequest, String.class);
+
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        }
+
     // Note: Hard delete is commented out due to foreign key constraints
     // @Test
     // void shouldHardDeleteBook() {
@@ -575,5 +585,338 @@ class AdminBookControllerTest {
         ResponseEntity<String> response = restTemplate.exchange(request, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    // Image URL Tests
+
+    @Test
+    void shouldCreateBookWithoutImageUrl() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+        headers.set("Content-Type", "application/json");
+
+        BookCreateRequest.SkuCreateRequest sku = BookCreateRequest.SkuCreateRequest.builder()
+                .sku("NO-IMAGE-001")
+                .format("PAPERBACK")
+                .initialStock(20)
+                .isDefault(true)
+                .build();
+
+        BookCreateRequest request = BookCreateRequest.builder()
+                .title("Book Without Image")
+                .basePrice(new BigDecimal("15.99"))
+                .skus(List.of(sku))
+                .build();
+
+        RequestEntity<BookCreateRequest> requestEntity = RequestEntity
+                .post("/admin/books")
+                .headers(headers)
+                .body(request);
+
+        ResponseEntity<AdminBookResponse> response = restTemplate.exchange(requestEntity, AdminBookResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getImageUrl()).isNull();
+    }
+
+    @Test
+    void shouldUpdateBookImageUrl() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+        headers.set("Content-Type", "application/json");
+
+        // First update: add image URL
+        BookUpdateRequest request1 = BookUpdateRequest.builder()
+                .title("Test Book")
+                .basePrice(new BigDecimal("25.00"))
+                .imageUrl("https://cdn.example.com/first-image.jpg")
+                .build();
+
+        RequestEntity<BookUpdateRequest> requestEntity1 = RequestEntity
+                .put("/admin/books/" + testBookId)
+                .headers(headers)
+                .body(request1);
+
+        ResponseEntity<AdminBookResponse> response1 = restTemplate.exchange(requestEntity1, AdminBookResponse.class);
+        assertThat(response1.getBody().getImageUrl()).isEqualTo("https://cdn.example.com/first-image.jpg");
+
+        // Second update: change image URL
+        BookUpdateRequest request2 = BookUpdateRequest.builder()
+                .title("Test Book")
+                .basePrice(new BigDecimal("25.00"))
+                .imageUrl("https://cdn.example.com/second-image.jpg")
+                .build();
+
+        RequestEntity<BookUpdateRequest> requestEntity2 = RequestEntity
+                .put("/admin/books/" + testBookId)
+                .headers(headers)
+                .body(request2);
+
+        ResponseEntity<AdminBookResponse> response2 = restTemplate.exchange(requestEntity2, AdminBookResponse.class);
+        assertThat(response2.getBody().getImageUrl()).isEqualTo("https://cdn.example.com/second-image.jpg");
+
+        // Verify in database
+        Book updatedBook = bookRepository.findById(testBookId).orElseThrow();
+        assertThat(updatedBook.getImageUrl()).isEqualTo("https://cdn.example.com/second-image.jpg");
+    }
+
+    @Test
+    void shouldRemoveImageUrlWhenUpdatingToNull() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+        headers.set("Content-Type", "application/json");
+
+        // First: set an image
+        BookUpdateRequest request1 = BookUpdateRequest.builder()
+                .title("Test Book")
+                .basePrice(new BigDecimal("25.00"))
+                .imageUrl("https://cdn.example.com/temp-image.jpg")
+                .build();
+
+        restTemplate.exchange(
+                RequestEntity.put("/admin/books/" + testBookId).headers(headers).body(request1),
+                AdminBookResponse.class
+        );
+
+        // Then: remove image by setting to null
+        BookUpdateRequest request2 = BookUpdateRequest.builder()
+                .title("Test Book")
+                .basePrice(new BigDecimal("25.00"))
+                .imageUrl(null)
+                .build();
+
+        RequestEntity<BookUpdateRequest> requestEntity2 = RequestEntity
+                .put("/admin/books/" + testBookId)
+                .headers(headers)
+                .body(request2);
+
+        ResponseEntity<AdminBookResponse> response = restTemplate.exchange(requestEntity2, AdminBookResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getImageUrl()).isNull();
+
+        // Verify in database
+        Book updatedBook = bookRepository.findById(testBookId).orElseThrow();
+        assertThat(updatedBook.getImageUrl()).isNull();
+    }
+
+    // SKU Management Tests
+
+    @Test
+    void shouldAddNewSkuToBook() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+
+        SkuCreateRequest request = SkuCreateRequest.builder()
+                .sku("NEW-SKU-001")
+                .format("eBook")
+                .priceOverride(new BigDecimal("9.99"))
+                .initialStock(999)
+                .isDefault(false)
+                .build();
+
+        RequestEntity<SkuCreateRequest> requestEntity = RequestEntity
+                .post("/admin/books/" + testBookId + "/skus")
+                .headers(headers)
+                .body(request);
+
+        ResponseEntity<AdminBookResponse> response = restTemplate.exchange(requestEntity, AdminBookResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().getSkus()).hasSize(2); // Original + new
+        
+        AdminBookResponse.SkuInfo newSku = response.getBody().getSkus().stream()
+                .filter(s -> "NEW-SKU-001".equals(s.getSku()))
+                .findFirst()
+                .orElseThrow();
+        
+        assertThat(newSku.getFormat()).isEqualTo("eBook");
+        assertThat(newSku.getPrice()).isEqualByComparingTo("9.99");
+        assertThat(newSku.getStock()).isEqualTo(999);
+        assertThat(newSku.getIsDefault()).isFalse();
+    }
+
+    @Test
+    void shouldUpdateExistingSku() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+
+        // Get current SKU ID
+        ResponseEntity<AdminBookResponse> getResponse = restTemplate.exchange(
+                RequestEntity.get("/admin/books/" + testBookId)
+                        .headers(headers)
+                        .build(),
+                AdminBookResponse.class
+        );
+        Long skuId = getResponse.getBody().getSkus().get(0).getId();
+
+        SkuUpdateRequest request = SkuUpdateRequest.builder()
+                .sku("UPDATED-SKU")
+                .format("Paperback Premium")
+                .priceOverride(new BigDecimal("35.00"))
+                .weightGrams(600)
+                .build();
+
+        RequestEntity<SkuUpdateRequest> requestEntity = RequestEntity
+                .put("/admin/books/" + testBookId + "/skus/" + skuId)
+                .headers(headers)
+                .body(request);
+
+        ResponseEntity<AdminBookResponse> response = restTemplate.exchange(requestEntity, AdminBookResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        
+        AdminBookResponse.SkuInfo updatedSku = response.getBody().getSkus().stream()
+                .filter(s -> skuId.equals(s.getId()))
+                .findFirst()
+                .orElseThrow();
+        
+        assertThat(updatedSku.getSku()).isEqualTo("UPDATED-SKU");
+        assertThat(updatedSku.getFormat()).isEqualTo("Paperback Premium");
+        assertThat(updatedSku.getPrice()).isEqualByComparingTo("35.00");
+    }
+
+    @Test
+    void shouldSetDefaultSku() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+
+        // Add a new SKU
+        SkuCreateRequest createRequest = SkuCreateRequest.builder()
+                .sku("NEW-DEFAULT-SKU")
+                .format("Hardcover")
+                .priceOverride(new BigDecimal("45.00"))
+                .initialStock(50)
+                .build();
+
+        ResponseEntity<AdminBookResponse> createResponse = restTemplate.exchange(
+                RequestEntity.post("/admin/books/" + testBookId + "/skus")
+                        .headers(headers)
+                        .body(createRequest),
+                AdminBookResponse.class
+        );
+
+        Long newSkuId = createResponse.getBody().getSkus().stream()
+                .filter(s -> "NEW-DEFAULT-SKU".equals(s.getSku()))
+                .findFirst()
+                .orElseThrow()
+                .getId();
+
+        // Set as default
+        RequestEntity<Void> setDefaultRequest = RequestEntity
+                .patch("/admin/books/" + testBookId + "/skus/" + newSkuId + "/set-default")
+                .headers(headers)
+                .build();
+
+        ResponseEntity<AdminBookResponse> response = restTemplate.exchange(setDefaultRequest, AdminBookResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getDefaultSkuId()).isEqualTo(newSkuId);
+        
+        AdminBookResponse.SkuInfo defaultSku = response.getBody().getSkus().stream()
+                .filter(AdminBookResponse.SkuInfo::getIsDefault)
+                .findFirst()
+                .orElseThrow();
+        
+        assertThat(defaultSku.getSku()).isEqualTo("NEW-DEFAULT-SKU");
+    }
+
+    @Test
+    void shouldDeleteSku() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+
+        // Add a second SKU first
+        SkuCreateRequest createRequest = SkuCreateRequest.builder()
+                .sku("TO-DELETE-SKU")
+                .format("eBook")
+                .initialStock(100)
+                .build();
+
+        ResponseEntity<AdminBookResponse> createResponse = restTemplate.exchange(
+                RequestEntity.post("/admin/books/" + testBookId + "/skus")
+                        .headers(headers)
+                        .body(createRequest),
+                AdminBookResponse.class
+        );
+
+        Long skuToDeleteId = createResponse.getBody().getSkus().stream()
+                .filter(s -> "TO-DELETE-SKU".equals(s.getSku()))
+                .findFirst()
+                .orElseThrow()
+                .getId();
+
+        // Delete SKU
+        RequestEntity<Void> deleteRequest = RequestEntity
+                .delete("/admin/books/" + testBookId + "/skus/" + skuToDeleteId)
+                .headers(headers)
+                .build();
+
+        ResponseEntity<AdminBookResponse> response = restTemplate.exchange(deleteRequest, AdminBookResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getSkus()).hasSize(1); // Back to 1 SKU
+        assertThat(response.getBody().getSkus().stream()
+                .noneMatch(s -> "TO-DELETE-SKU".equals(s.getSku()))).isTrue();
+    }
+
+    @Test
+    void shouldNotDeleteLastSku() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+
+        // Get the only SKU
+        ResponseEntity<AdminBookResponse> getResponse = restTemplate.exchange(
+                RequestEntity.get("/admin/books/" + testBookId)
+                        .headers(headers)
+                        .build(),
+                AdminBookResponse.class
+        );
+        Long onlySkuId = getResponse.getBody().getSkus().get(0).getId();
+
+        // Try to delete it
+        RequestEntity<Void> deleteRequest = RequestEntity
+                .delete("/admin/books/" + testBookId + "/skus/" + onlySkuId)
+                .headers(headers)
+                .build();
+
+        ResponseEntity<Map> response = restTemplate.exchange(deleteRequest, Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().get("message")).toString()
+                .contains("Cannot delete the last SKU");
+    }
+
+    @Test
+    void shouldNotAddDuplicateSkuCode() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+
+        // Get existing SKU code
+        ResponseEntity<AdminBookResponse> getResponse = restTemplate.exchange(
+                RequestEntity.get("/admin/books/" + testBookId)
+                        .headers(headers)
+                        .build(),
+                AdminBookResponse.class
+        );
+        String existingSkuCode = getResponse.getBody().getSkus().get(0).getSku();
+
+        // Try to add with same SKU code
+        SkuCreateRequest request = SkuCreateRequest.builder()
+                .sku(existingSkuCode)
+                .format("Duplicate")
+                .build();
+
+        RequestEntity<SkuCreateRequest> requestEntity = RequestEntity
+                .post("/admin/books/" + testBookId + "/skus")
+                .headers(headers)
+                .body(request);
+
+        ResponseEntity<Map> response = restTemplate.exchange(requestEntity, Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().get("message")).toString()
+                .contains("SKU already exists");
     }
 }

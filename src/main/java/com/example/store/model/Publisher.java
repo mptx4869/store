@@ -6,12 +6,11 @@ import java.util.Set;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -49,7 +48,9 @@ public class Publisher {
     @Column(name = "updated_at", insertable = false)
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "publisher", fetch = FetchType.LAZY)
+    // Publisher relationship removed from Book; keep entity for backward compatibility
+    // without enforcing the old bidirectional mapping.
+    @Transient
     @Builder.Default
     private Set<Book> books = new HashSet<>();
 }

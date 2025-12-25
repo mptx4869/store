@@ -13,15 +13,19 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.store.dto.AdminBookResponse;
 import com.example.store.dto.BookCreateRequest;
 import com.example.store.dto.BookUpdateRequest;
+import com.example.store.dto.SkuCreateRequest;
+import com.example.store.dto.SkuUpdateRequest;
+import com.example.store.exception.ConflictException;
 import com.example.store.exception.ResourceNotFoundException;
 import com.example.store.model.Book;
+import com.example.store.model.BookCategory;
+import com.example.store.model.Category;
 import com.example.store.model.Inventory;
 import com.example.store.model.ProductSku;
-import com.example.store.model.Publisher;
 import com.example.store.repository.BookRepository;
+import com.example.store.repository.CategoryRepository;
 import com.example.store.repository.InventoryRepository;
 import com.example.store.repository.ProductSkuRepository;
-import com.example.store.repository.PublisherRepository;
 
 @Service
 public class AdminBookService {
@@ -36,8 +40,8 @@ public class AdminBookService {
     private InventoryRepository inventoryRepository;
     
     @Autowired
-    private PublisherRepository publisherRepository;
-
+    private CategoryRepository categoryRepository;
+    
     @Transactional(readOnly = true)
     public Page<AdminBookResponse> getAllBooks(Pageable pageable, Boolean includeDeleted) {
         Page<Book> books;
@@ -58,26 +62,24 @@ public class AdminBookService {
 
     @Transactional
     public AdminBookResponse createBook(BookCreateRequest request) {
-        // Validate publisher if provided
-        Publisher publisher = null;
-        if (request.getPublisherId() != null) {
-            publisher = publisherRepository.findById(request.getPublisherId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Publisher not found with id: " + request.getPublisherId()));
-        }
-        
-        // Create book
+        // Create book (publisher removed; single image stored on book)
         Book book = Book.builder()
-                .title(request.getTitle())
-                .subtitle(request.getSubtitle())
-                .description(request.getDescription())
-                .language(request.getLanguage())
-                .pages(request.getPages())
-                .publisher(publisher)
-                .publishedDate(request.getPublishedDate())
-                .basePrice(request.getBasePrice())
-                .build();
+            .title(request.getTitle())
+            .subtitle(request.getSubtitle())
+            .description(request.getDescription())
+            .language(request.getLanguage())
+            .pages(request.getPages())
+            .publishedDate(request.getPublishedDate())
+            .imageUrl(request.getImageUrl())
+            .basePrice(request.getBasePrice())
+            .build();
         
         book = bookRepository.save(book);
+        
+        // Add categories
+        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
+            updateBookCategories(book, request.getCategoryIds());
+        }
         
         // Create SKUs and inventories
         Long defaultSkuId = null;
@@ -131,13 +133,6 @@ public class AdminBookService {
             throw new IllegalStateException("Cannot update deleted book");
         }
         
-        // Validate publisher if provided
-        if (request.getPublisherId() != null) {
-            Publisher publisher = publisherRepository.findById(request.getPublisherId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Publisher not found with id: " + request.getPublisherId()));
-            book.setPublisher(publisher);
-        }
-        
         // Update fields
         book.setTitle(request.getTitle());
         book.setSubtitle(request.getSubtitle());
@@ -145,9 +140,15 @@ public class AdminBookService {
         book.setLanguage(request.getLanguage());
         book.setPages(request.getPages());
         book.setPublishedDate(request.getPublishedDate());
+        book.setImageUrl(request.getImageUrl());
         book.setBasePrice(request.getBasePrice());
         
         book = bookRepository.save(book);
+        
+        // Update categories
+        if (request.getCategoryIds() != null) {
+            updateBookCategories(book, request.getCategoryIds());
+        }
         
         return mapToAdminBookResponse(book);
     }
@@ -163,6 +164,21 @@ public class AdminBookService {
             book.setDeletedAt(LocalDateTime.now());
             bookRepository.save(book);
         }
+    }
+
+    @Transactional
+    public AdminBookResponse restoreBook(Long bookId) {
+        Book book = bookRepository.findById(bookId)
+            .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+
+        if (book.getDeletedAt() == null) {
+            throw new ConflictException("Book is not soft deleted");
+        }
+
+        book.setDeletedAt(null);
+        Book restored = bookRepository.save(book);
+
+        return mapToAdminBookResponse(restored);
     }
 
     private AdminBookResponse mapToAdminBookResponse(Book book) {
@@ -190,6 +206,14 @@ public class AdminBookService {
                 })
                 .collect(Collectors.toList());
         
+        // Map categories
+        List<AdminBookResponse.CategoryInfo> categoryInfos = book.getBookCategories().stream()
+                .map(bc -> AdminBookResponse.CategoryInfo.builder()
+                        .id(bc.getCategory().getId())
+                        .name(bc.getCategory().getName())
+                        .build())
+                .collect(Collectors.toList());
+        
         return AdminBookResponse.builder()
                 .id(book.getId())
                 .title(book.getTitle())
@@ -197,15 +221,168 @@ public class AdminBookService {
                 .description(book.getDescription())
                 .language(book.getLanguage())
                 .pages(book.getPages())
-                .publisherName(book.getPublisher() != null ? book.getPublisher().getName() : null)
-                .publisherId(book.getPublisher() != null ? book.getPublisher().getId() : null)
                 .publishedDate(book.getPublishedDate())
+                .imageUrl(book.getImageUrl())
                 .basePrice(book.getBasePrice())
                 .defaultSkuId(book.getDefaultSkuId())
                 .createdAt(book.getCreatedAt())
                 .updatedAt(book.getUpdatedAt())
                 .deletedAt(book.getDeletedAt())
+                .categories(categoryInfos)
                 .skus(skuInfos)
                 .build();
+    }
+
+    // SKU Management
+    
+    @Transactional
+    public AdminBookResponse addSku(Long bookId, SkuCreateRequest request) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+        
+        if (book.getDeletedAt() != null) {
+            throw new IllegalStateException("Cannot add SKU to deleted book");
+        }
+        
+        // Check duplicate SKU code
+        if (productSkuRepository.findBySku(request.getSku()).isPresent()) {
+            throw new ConflictException("SKU already exists: " + request.getSku());
+        }
+        
+        // Create new SKU
+        ProductSku sku = ProductSku.builder()
+                .book(book)
+                .sku(request.getSku())
+                .format(request.getFormat())
+                .priceOverride(request.getPriceOverride())
+                .weightGrams(request.getWeightGrams())
+                .lengthMm(request.getLengthMm())
+                .widthMm(request.getWidthMm())
+                .heightMm(request.getHeightMm())
+                .build();
+        
+        sku = productSkuRepository.save(sku);
+        
+        // Create inventory
+        int initialStock = request.getInitialStock() != null ? request.getInitialStock() : 0;
+        Inventory inventory = new Inventory();
+        inventory.setProductSku(sku);
+        inventory.setStock(initialStock);
+        inventory.setReserved(0);
+        inventoryRepository.save(inventory);
+        
+        // Set as default if requested or if this is the first SKU
+        if (Boolean.TRUE.equals(request.getIsDefault()) || book.getDefaultSkuId() == null) {
+            book.setDefaultSkuId(sku.getId());
+            bookRepository.save(book);
+        }
+        
+        return mapToAdminBookResponse(book);
+    }
+    
+    @Transactional
+    public AdminBookResponse updateSku(Long bookId, Long skuId, SkuUpdateRequest request) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+        
+        ProductSku sku = productSkuRepository.findById(skuId)
+                .filter(s -> s.getBook().getId().equals(bookId))
+                .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
+        
+        // Check duplicate SKU code (except current)
+        productSkuRepository.findBySku(request.getSku())
+                .ifPresent(existingSku -> {
+                    if (!existingSku.getId().equals(skuId)) {
+                        throw new ConflictException("SKU already exists: " + request.getSku());
+                    }
+                });
+        
+        // Update SKU
+        sku.setSku(request.getSku());
+        sku.setFormat(request.getFormat());
+        sku.setPriceOverride(request.getPriceOverride());
+        sku.setWeightGrams(request.getWeightGrams());
+        sku.setLengthMm(request.getLengthMm());
+        sku.setWidthMm(request.getWidthMm());
+        sku.setHeightMm(request.getHeightMm());
+        productSkuRepository.save(sku);
+        
+        return mapToAdminBookResponse(book);
+    }
+    
+    @Transactional
+    public AdminBookResponse setDefaultSku(Long bookId, Long skuId) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+        
+        ProductSku sku = productSkuRepository.findById(skuId)
+                .filter(s -> s.getBook().getId().equals(bookId))
+                .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
+        
+        book.setDefaultSkuId(skuId);
+        bookRepository.save(book);
+        
+        return mapToAdminBookResponse(book);
+    }
+    
+    @Transactional
+    public AdminBookResponse deleteSku(Long bookId, Long skuId) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+        
+        ProductSku sku = productSkuRepository.findById(skuId)
+                .filter(s -> s.getBook().getId().equals(bookId))
+                .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
+        
+        // Check if this is the last SKU
+        List<ProductSku> allSkus = productSkuRepository.findByBookId(bookId);
+        if (allSkus.size() <= 1) {
+            throw new ConflictException("Cannot delete the last SKU. Book must have at least one SKU.");
+        }
+        
+        // Check if this is the default SKU
+        if (sku.getId().equals(book.getDefaultSkuId())) {
+            // Set another SKU as default
+            ProductSku newDefaultSku = allSkus.stream()
+                    .filter(s -> !s.getId().equals(skuId))
+                    .findFirst()
+                    .orElseThrow();
+            book.setDefaultSkuId(newDefaultSku.getId());
+            bookRepository.save(book);
+        }
+        
+        // Delete inventory first (foreign key)
+        inventoryRepository.findByProductSkuId(skuId).ifPresent(inventoryRepository::delete);
+        
+        // Delete SKU
+        productSkuRepository.delete(sku);
+        
+        return mapToAdminBookResponse(book);
+    }
+    
+    /**
+     * Helper method to update book categories
+     */
+    private void updateBookCategories(Book book, List<Long> categoryIds) {
+        // Clear existing categories
+        book.getBookCategories().clear();
+        
+        // Add new categories
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            for (Long categoryId : categoryIds) {
+                Category category = categoryRepository.findById(categoryId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + categoryId));
+                
+                BookCategory bookCategory = BookCategory.builder()
+                        .book(book)
+                        .category(category)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+                
+                book.getBookCategories().add(bookCategory);
+            }
+        }
+        
+        bookRepository.save(book);
     }
 }

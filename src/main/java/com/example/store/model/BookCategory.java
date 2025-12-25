@@ -25,6 +25,4 @@ public class BookCategory {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
-    private Integer priority;
 }
