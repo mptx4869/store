@@ -19,6 +19,10 @@ import com.example.store.repository.OrderRepository;
 import com.example.store.repository.RoleRepository;
 import com.example.store.repository.UserRepository;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+import com.example.store.dto.UserChangePasswordRequest;
+import com.example.store.exception.LoginException;
+
 /**
  * Service for managing users - CRUD operations and admin functions
  * Separated from authentication concerns (AutherService)
@@ -30,10 +34,14 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final OrderRepository orderRepository;
 
-    public UserService(UserRepository userRepository, RoleRepository roleRepository, OrderRepository orderRepository) {
+    private final PasswordEncoder passwordEncoder;
+
+
+    public UserService(UserRepository userRepository, RoleRepository roleRepository, OrderRepository orderRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.orderRepository = orderRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // ==================== ADMIN USER MANAGEMENT ====================
@@ -97,6 +105,20 @@ public class UserService {
     }
 
     // ==================== HELPER METHODS ====================
+
+    /**
+     * Change password for current user
+     */
+    @Transactional
+    public void changePassword(String username, UserChangePasswordRequest request) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new LoginException("Old password is incorrect");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
 
     /**
      * Find user by username
