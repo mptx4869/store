@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -152,5 +153,66 @@ class BookControllerTest {
             .containsEntry("error", "Resource Not Found")
             .containsEntry("message", "Book not found")
             .containsEntry("code", "RESOURCE_NOT_FOUND");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldReturnNewBooksByPublishedDate() {
+        // Create a book with recent published date
+        Book recentBook = bookRepository.save(Book.builder()
+            .title("Recent Book")
+            .description("Recently published book")
+            .language("EN")
+            .pages(150)
+            .publishedDate(LocalDate.now().minusDays(5))
+            .imageUrl("https://cdn.example.com/recent-book.jpg")
+            .basePrice(new BigDecimal("18.00"))
+            .build());
+
+        // Query new books endpoint
+        ResponseEntity<Map> response = restTemplate.getForEntity("/books/new?page=0&size=10", Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).containsKey("content");
+
+        List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().get("content");
+        
+        // Should contain the recent book
+        assertThat(content)
+            .extracting(book -> ((Number) book.get("id")).longValue())
+            .contains(recentBook.getId());
+
+        // The existing book (published in 2020) might appear because createdAt is recent in test
+        // This is expected behavior - a book is "new" if EITHER publishedDate OR createdAt is recent
+        assertThat(content).isNotEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldReturnNewBooksPaginatedAndSorted() {
+        // Create multiple recent books
+        for (int i = 1; i <= 3; i++) {
+            bookRepository.save(Book.builder()
+                .title("New Book " + i)
+                .description("Description " + i)
+                .language("EN")
+                .pages(100 + i * 10)
+                .publishedDate(LocalDate.now().minusDays(i))
+                .imageUrl("https://cdn.example.com/book" + i + ".jpg")
+                .basePrice(new BigDecimal("10.00").add(new BigDecimal(i)))
+                .build());
+        }
+
+        // Test pagination
+        ResponseEntity<Map> response = restTemplate.getForEntity("/books/new?page=0&size=2&sortBy=publishedDate&sortDirection=DESC", Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        
+        Map<String, Object> body = response.getBody();
+        assertThat(body).containsKey("content");
+        assertThat(body).containsKey("totalElements");
+        
+        List<Map<String, Object>> content = (List<Map<String, Object>>) body.get("content");
+        assertThat(content).hasSizeLessThanOrEqualTo(2); // Respects page size
     }
 }

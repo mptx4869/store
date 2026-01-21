@@ -1,8 +1,15 @@
 package com.example.store.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.example.store.dto.BookResponse;
@@ -17,6 +24,9 @@ public class BookService {
 
     private final BookRepository bookRepository;
     private final ProductSkuRepository productSkuRepository;
+
+    @Value("${book.new.threshold-days:30}")
+    private int newThresholdDays;
  
     public BookService(BookRepository bookRepository, ProductSkuRepository productSkuRepository) {
         this.bookRepository = bookRepository;
@@ -29,11 +39,31 @@ public class BookService {
             .map(this::mapToResponse)
             .toList();
     }
+
+    public Page<BookResponse> getNewBooks(Pageable pageable) {
+        // Cap page size to prevent abuse
+        Pageable cappedPageable = capPageSize(pageable, 50);
+        
+        // Calculate cutoff dates
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        LocalDateTime cutoffDateTime = now.minusDays(newThresholdDays);
+        LocalDate cutoffDate = cutoffDateTime.toLocalDate();
+
+        return bookRepository.findNewBooks(cutoffDate, cutoffDateTime, cappedPageable)
+                .map(this::mapToResponse);
+    }
  
     public BookResponse getBookById(Long id) {
         return bookRepository.findById(id)
             .map(this::mapToResponse)
             .orElseThrow(() -> new ResourceNotFoundException("Book not found"));
+    }
+
+    private Pageable capPageSize(Pageable pageable, int maxSize) {
+        if (pageable.getPageSize() > maxSize) {
+            return PageRequest.of(pageable.getPageNumber(), maxSize, pageable.getSort());
+        }
+        return pageable;
     }
 
     private BookResponse mapToResponse(Book book) {

@@ -75,15 +75,13 @@ CREATE TABLE IF NOT EXISTS books (
   description CLOB,
   language VARCHAR(50),
   pages INT,
-  publisher_id BIGINT,
   published_date DATE,
   image_url VARCHAR(1000),
   base_price DECIMAL(12,2) NOT NULL,
   default_sku_id BIGINT,
   created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
   updated_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  deleted_at TIMESTAMP(6),
-  CONSTRAINT fk_books_publisher FOREIGN KEY (publisher_id) REFERENCES publishers(id)
+  deleted_at TIMESTAMP(6)
 );
 
 -- ---------------------------

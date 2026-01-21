@@ -1,0 +1,43 @@
+﻿> Task :clean
+> Task :compileJava
+> Task :processResources
+> Task :classes
+
+> Task :compileTestJava
+./gradlew : Note: D:\WorkSpace\store\src\test\java\com\example\store\AdminCategoryControllerTest.java uses or 
+overrides a deprecated API.
+At line:1 char:1
++ ./gradlew clean test --tests "BookControllerTest.shouldReturnSingleBo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Note: D:\WorkSp...deprecated API.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :processTestResources
+> Task :testClasses
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because 
+bootstrap classpath has been appended
+
+> Task :test
+
+BookControllerTest > shouldReturnSingleBook() PASSED
+
+2026-01-21T09:33:41.466+07:00  INFO 29528 --- [store] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-01-21T09:33:41.513+07:00  INFO 29528 --- [store] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-01-21T09:33:41.549+07:00  INFO 29528 --- [store] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-21T09:33:41.562+07:00  INFO 29528 --- [store] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-21T09:33:41.647+07:00  INFO 29528 --- [store] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+
+[Incubating] Problems report is available at: file:///D:/WorkSpace/store/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 3s
+6 actionable tasks: 6 executed

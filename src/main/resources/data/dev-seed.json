@@ -47,6 +47,21 @@
       "id": 2,
       "name": "Self Help",
       "description": "Guides for personal development and productivity"
+    },
+    {
+      "id": 3,
+      "name": "Technology",
+      "description": "Books on programming, software engineering, and tech trends"
+    },
+    {
+      "id": 4,
+      "name": "Fiction",
+      "description": "Literary fiction and novels"
+    },
+    {
+      "id": 5,
+      "name": "Business",
+      "description": "Economics, management, and entrepreneurship"
     }
   ],
   "books": [
@@ -59,7 +74,7 @@
       "pages": 384,
       "publisherId": 1001,
       "publishedDate": "2023-05-16",
-      "imageUrl": "https://example.com/images/stars-beyond.jpg",
+      "imageUrl": "http://localhost:8080/media/stars-beyond.png",
       "basePrice": 19.99,
       "defaultSkuId": 1
     },
@@ -72,9 +87,269 @@
       "pages": 256,
       "publisherId": 1002,
       "publishedDate": "2022-09-05",
-      "imageUrl": "https://example.com/images/better-habits.jpg",
+      "imageUrl": "http://localhost:8080/media/better-habits.png",
       "basePrice": 15.50,
       "defaultSkuId": 2
+    },
+    {
+      "id": 3,
+      "title": "Clean Code",
+      "subtitle": "A Handbook of Agile Software Craftsmanship",
+      "description": "Even bad code can function. But if code isn't clean, it can bring a development organization to its knees.",
+      "language": "English",
+      "pages": 464,
+      "publisherId": 1003,
+      "publishedDate": "2008-08-01",
+      "imageUrl": "http://localhost:8080/media/clean-code.png",
+      "basePrice": 42.00,
+      "defaultSkuId": 4
+    },
+    {
+      "id": 4,
+      "title": "The Pragmatic Programmer",
+      "subtitle": "Your Journey to Mastery",
+      "description": "One of the most significant books in my life. Obie Fernandez, Author, The Rails Way.",
+      "language": "English",
+      "pages": 352,
+      "publisherId": 1004,
+      "publishedDate": "2019-09-13",
+      "imageUrl": "http://localhost:8080/media/the-pragmatic-programmer.png",
+      "basePrice": 39.99,
+      "defaultSkuId": 5
+    },
+    {
+      "id": 5,
+      "title": "Dune",
+      "subtitle": null,
+      "description": "Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides.",
+      "language": "English",
+      "pages": 688,
+      "publisherId": 1005,
+      "publishedDate": "1965-08-01",
+      "imageUrl": "http://localhost:8080/media/dune.png",
+      "basePrice": 18.00,
+      "defaultSkuId": 6
+    },
+    {
+      "id": 6,
+      "title": "Atomic Habits",
+      "subtitle": "An Easy & Proven Way to Build Good Habits & Break Bad Ones",
+      "description": "No matter your goals, Atomic Habits offers a proven framework for improving--every day.",
+      "language": "English",
+      "pages": 320,
+      "publisherId": 1006,
+      "publishedDate": "2018-10-16",
+      "imageUrl": "http://localhost:8080/media/atomic-habits.png",
+      "basePrice": 16.99,
+      "defaultSkuId": 7
+    },
+    {
+      "id": 7,
+      "title": "The Great Gatsby",
+      "subtitle": null,
+      "description": "A portrait of the Jazz Age in all of its decadence and excess.",
+      "language": "English",
+      "pages": 180,
+      "publisherId": 1007,
+      "publishedDate": "1925-04-10",
+      "imageUrl": "http://localhost:8080/media/the-great-gatsby.png",
+      "basePrice": 10.99,
+      "defaultSkuId": 8
+    },
+    {
+      "id": 8,
+      "title": "1984",
+      "subtitle": null,
+      "description": "Among the seminal texts of the 20th century, Nineteen Eighty-Four is a rare work that grows more haunting as its futuristic purgatory becomes more real.",
+      "language": "English",
+      "pages": 328,
+      "publisherId": 1008,
+      "publishedDate": "1949-06-08",
+      "imageUrl": "http://localhost:8080/media/1984.png",
+      "basePrice": 12.50,
+      "defaultSkuId": 9
+    },
+    {
+      "id": 9,
+      "title": "Zero to One",
+      "subtitle": "Notes on Startups, or How to Build the Future",
+      "description": "The next Bill Gates will not build an operating system. The next Larry Page or Sergey Brin won't make a search engine.",
+      "language": "English",
+      "pages": 224,
+      "publisherId": 1009,
+      "publishedDate": "2014-09-16",
+      "imageUrl": "http://localhost:8080/media/zero-to-one.png",
+      "basePrice": 22.00,
+      "defaultSkuId": 10
+    },
+    {
+      "id": 10,
+      "title": "Design Patterns",
+      "subtitle": "Elements of Reusable Object-Oriented Software",
+      "description": "Capturing a wealth of experience about the design of object-oriented software.",
+      "language": "English",
+      "pages": 395,
+      "publisherId": 1004,
+      "publishedDate": "1994-10-21",
+      "imageUrl": "http://localhost:8080/media/design-patterns.png",
+      "basePrice": 49.99,
+      "defaultSkuId": 11
+    },
+    {
+      "id": 11,
+      "title": "To Kill a Mockingbird",
+      "subtitle": null,
+      "description": "The unforgettable novel of a childhood in a sleepy Southern town and the crisis of conscience that rocked it.",
+      "language": "English",
+      "pages": 281,
+      "publisherId": 1010,
+      "publishedDate": "1960-07-11",
+      "imageUrl": "http://localhost:8080/media/to-kill-a-mockingbird.png",
+      "basePrice": 14.99,
+      "defaultSkuId": 12
+    },
+    {
+      "id": 12,
+      "title": "Neuromancer",
+      "subtitle": null,
+      "description": "The Matrix is a world within the world, a global consensus-hallucination, the representation of every byte of data in cyberspace.",
+      "language": "English",
+      "pages": 271,
+      "publisherId": 1005,
+      "publishedDate": "1984-07-01",
+      "imageUrl": "http://localhost:8080/media/neuromancer.png",
+      "basePrice": 13.99,
+      "defaultSkuId": 13
+    },
+    {
+      "id": 13,
+      "title": "Thinking, Fast and Slow",
+      "subtitle": null,
+      "description": "The major New York Times bestseller that explains the two systems that drive the way we think.",
+      "language": "English",
+      "pages": 499,
+      "publisherId": 1011,
+      "publishedDate": "2011-10-25",
+      "imageUrl": "http://localhost:8080/media/thinking-fast-and-slow.png",
+      "basePrice": 19.50,
+      "defaultSkuId": 14
+    },
+    {
+      "id": 14,
+      "title": "Introduction to Algorithms",
+      "subtitle": null,
+      "description": "A comprehensive update of the leading algorithms text, with new material on matchings in bipartite graphs, online algorithms, machine learning, and more.",
+      "language": "English",
+      "pages": 1312,
+      "publisherId": 1012,
+      "publishedDate": "2022-04-05",
+      "imageUrl": "http://localhost:8080/media/introduction-to-algorithms.png",
+      "basePrice": 85.00,
+      "defaultSkuId": 15
+    },
+    {
+      "id": 15,
+      "title": "Deep Work",
+      "subtitle": "Rules for Focused Success in a Distracted World",
+      "description": "Deep work is the ability to focus without distraction on a cognitively demanding task.",
+      "language": "English",
+      "pages": 304,
+      "publisherId": 1013,
+      "publishedDate": "2016-01-05",
+      "imageUrl": "http://localhost:8080/media/deep-work.png",
+      "basePrice": 18.00,
+      "defaultSkuId": 16
+    },
+    {
+      "id": 16,
+      "title": "Shoe Dog",
+      "subtitle": "A Memoir by the Creator of Nike",
+      "description": "In this candid and riveting memoir, for the first time ever, Nike founder and board chairman Phil Knight shares the inside story of the company's early days.",
+      "language": "English",
+      "pages": 400,
+      "publisherId": 1014,
+      "publishedDate": "2016-04-26",
+      "imageUrl": "http://localhost:8080/media/shoe-dog.png",
+      "basePrice": 20.00,
+      "defaultSkuId": 17
+    },
+    {
+      "id": 17,
+      "title": "The Catcher in the Rye",
+      "subtitle": null,
+      "description": "The hero-narrator of The Catcher in the Rye is an ancient child of sixteen, a native New Yorker named Holden Caulfield.",
+      "language": "English",
+      "pages": 277,
+      "publisherId": 1015,
+      "publishedDate": "1951-07-16",
+      "imageUrl": "http://localhost:8080/media/the-catcher-in-the-rye.png",
+      "basePrice": 11.50,
+      "defaultSkuId": 18
+    },
+    {
+      "id": 18,
+      "title": "Foundation",
+      "subtitle": null,
+      "description": "For twelve thousand years the Galactic Empire has ruled supreme. Now it is dying.",
+      "language": "English",
+      "pages": 255,
+      "publisherId": 1016,
+      "publishedDate": "1951-05-01",
+      "imageUrl": "http://localhost:8080/media/foundation.png",
+      "basePrice": 16.00,
+      "defaultSkuId": 19
+    },
+    {
+      "id": 19,
+      "title": "Rich Dad Poor Dad",
+      "subtitle": "What the Rich Teach Their Kids About Money",
+      "description": "Rich Dad Poor Dad is Robert's story of growing up with two dads.",
+      "language": "English",
+      "pages": 336,
+      "publisherId": 1017,
+      "publishedDate": "1997-04-01",
+      "imageUrl": "http://localhost:8080/media/rich-dad-poor-dad.png",
+      "basePrice": 15.99,
+      "defaultSkuId": 20
+    },
+    {
+      "id": 20,
+      "title": "Sapiens",
+      "subtitle": "A Brief History of Humankind",
+      "description": "From a renowned historian comes a groundbreaking narrative of humanity's creation and evolution.",
+      "language": "English",
+      "pages": 443,
+      "publisherId": 1018,
+      "publishedDate": "2015-02-10",
+      "imageUrl": "http://localhost:8080/media/sapiens.png",
+      "basePrice": 24.99,
+      "defaultSkuId": 21
+    },
+    {
+      "id": 21,
+      "title": "Refactoring",
+      "subtitle": "Improving the Design of Existing Code",
+      "description": "Refactoring is a controlled technique for improving the design of an existing code base.",
+      "language": "English",
+      "pages": 448,
+      "publisherId": 1004,
+      "publishedDate": "2018-11-19",
+      "imageUrl": "http://localhost:8080/media/refactoring.png",
+      "basePrice": 45.00,
+      "defaultSkuId": 22
+    },
+    {
+      "id": 22,
+      "title": "Snow Crash",
+      "subtitle": null,
+      "description": "In reality, Hiro Protagonist delivers pizza for Uncle Enzo's CosoNostra Pizza Inc., but in the Metaverse he's a warrior prince.",
+      "language": "English",
+      "pages": 480,
+      "publisherId": 1019,
+      "publishedDate": "1992-06-01",
+      "imageUrl": "http://localhost:8080/media/snow-crash.png",
+      "basePrice": 14.50,
+      "defaultSkuId": 23
     }
   ],
   "productSkus": [
@@ -110,6 +385,226 @@
       "lengthMm": null,
       "widthMm": null,
       "heightMm": null
+    },
+    {
+      "id": 4,
+      "bookId": 3,
+      "sku": "CLEAN-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 800,
+      "lengthMm": 235,
+      "widthMm": 178,
+      "heightMm": 25
+    },
+    {
+      "id": 5,
+      "bookId": 4,
+      "sku": "PRAG-HC-001",
+      "format": "Hardcover",
+      "priceOverride": 45.99,
+      "weightGrams": 650,
+      "lengthMm": 230,
+      "widthMm": 190,
+      "heightMm": 24
+    },
+    {
+      "id": 6,
+      "bookId": 5,
+      "sku": "DUNE-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 500,
+      "lengthMm": 198,
+      "widthMm": 129,
+      "heightMm": 30
+    },
+    {
+      "id": 7,
+      "bookId": 6,
+      "sku": "ATOMIC-HC-001",
+      "format": "Hardcover",
+      "priceOverride": 24.00,
+      "weightGrams": 540,
+      "lengthMm": 215,
+      "widthMm": 145,
+      "heightMm": 28
+    },
+    {
+      "id": 8,
+      "bookId": 7,
+      "sku": "GATSBY-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 200,
+      "lengthMm": 198,
+      "widthMm": 129,
+      "heightMm": 12
+    },
+    {
+      "id": 9,
+      "bookId": 8,
+      "sku": "1984-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 280,
+      "lengthMm": 198,
+      "widthMm": 129,
+      "heightMm": 18
+    },
+    {
+      "id": 10,
+      "bookId": 9,
+      "sku": "ZERO-HC-001",
+      "format": "Hardcover",
+      "priceOverride": 28.00,
+      "weightGrams": 450,
+      "lengthMm": 210,
+      "widthMm": 140,
+      "heightMm": 22
+    },
+    {
+      "id": 11,
+      "bookId": 10,
+      "sku": "DP-HC-001",
+      "format": "Hardcover",
+      "priceOverride": null,
+      "weightGrams": 900,
+      "lengthMm": 240,
+      "widthMm": 195,
+      "heightMm": 35
+    },
+    {
+      "id": 12,
+      "bookId": 11,
+      "sku": "MOCK-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 310,
+      "lengthMm": 203,
+      "widthMm": 135,
+      "heightMm": 20
+    },
+    {
+      "id": 13,
+      "bookId": 12,
+      "sku": "NEURO-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 240,
+      "lengthMm": 170,
+      "widthMm": 105,
+      "heightMm": 18
+    },
+    {
+      "id": 14,
+      "bookId": 13,
+      "sku": "THINK-HC-001",
+      "format": "Hardcover",
+      "priceOverride": 32.00,
+      "weightGrams": 750,
+      "lengthMm": 240,
+      "widthMm": 160,
+      "heightMm": 40
+    },
+    {
+      "id": 15,
+      "bookId": 14,
+      "sku": "ALGO-HC-001",
+      "format": "Hardcover",
+      "priceOverride": 95.00,
+      "weightGrams": 1800,
+      "lengthMm": 260,
+      "widthMm": 210,
+      "heightMm": 60
+    },
+    {
+      "id": 16,
+      "bookId": 15,
+      "sku": "DEEP-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 350,
+      "lengthMm": 210,
+      "widthMm": 140,
+      "heightMm": 20
+    },
+    {
+      "id": 17,
+      "bookId": 16,
+      "sku": "SHOE-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 380,
+      "lengthMm": 200,
+      "widthMm": 130,
+      "heightMm": 25
+    },
+    {
+      "id": 18,
+      "bookId": 17,
+      "sku": "CATCH-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 220,
+      "lengthMm": 175,
+      "widthMm": 105,
+      "heightMm": 16
+    },
+    {
+      "id": 19,
+      "bookId": 18,
+      "sku": "FOUND-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 260,
+      "lengthMm": 195,
+      "widthMm": 130,
+      "heightMm": 18
+    },
+    {
+      "id": 20,
+      "bookId": 19,
+      "sku": "RICH-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 300,
+      "lengthMm": 230,
+      "widthMm": 150,
+      "heightMm": 15
+    },
+    {
+      "id": 21,
+      "bookId": 20,
+      "sku": "SAPIENS-HC-001",
+      "format": "Hardcover",
+      "priceOverride": 35.00,
+      "weightGrams": 800,
+      "lengthMm": 235,
+      "widthMm": 160,
+      "heightMm": 45
+    },
+    {
+      "id": 22,
+      "bookId": 21,
+      "sku": "REFAC-HC-001",
+      "format": "Hardcover",
+      "priceOverride": null,
+      "weightGrams": 950,
+      "lengthMm": 240,
+      "widthMm": 190,
+      "heightMm": 30
+    },
+    {
+      "id": 23,
+      "bookId": 22,
+      "sku": "SNOW-PB-001",
+      "format": "Paperback",
+      "priceOverride": null,
+      "weightGrams": 400,
+      "lengthMm": 200,
+      "widthMm": 130,
+      "heightMm": 28
     }
   ],
   "inventory": [
@@ -127,6 +622,106 @@
       "skuId": 3,
       "stock": 9999,
       "reserved": 0
+    },
+    {
+      "skuId": 4,
+      "stock": 100,
+      "reserved": 10
+    },
+    {
+      "skuId": 5,
+      "stock": 45,
+      "reserved": 2
+    },
+    {
+      "skuId": 6,
+      "stock": 80,
+      "reserved": 0
+    },
+    {
+      "skuId": 7,
+      "stock": 150,
+      "reserved": 15
+    },
+    {
+      "skuId": 8,
+      "stock": 200,
+      "reserved": 5
+    },
+    {
+      "skuId": 9,
+      "stock": 120,
+      "reserved": 3
+    },
+    {
+      "skuId": 10,
+      "stock": 75,
+      "reserved": 1
+    },
+    {
+      "skuId": 11,
+      "stock": 30,
+      "reserved": 0
+    },
+    {
+      "skuId": 12,
+      "stock": 90,
+      "reserved": 4
+    },
+    {
+      "skuId": 13,
+      "stock": 55,
+      "reserved": 2
+    },
+    {
+      "skuId": 14,
+      "stock": 60,
+      "reserved": 6
+    },
+    {
+      "skuId": 15,
+      "stock": 20,
+      "reserved": 0
+    },
+    {
+      "skuId": 16,
+      "stock": 85,
+      "reserved": 8
+    },
+    {
+      "skuId": 17,
+      "stock": 40,
+      "reserved": 2
+    },
+    {
+      "skuId": 18,
+      "stock": 110,
+      "reserved": 0
+    },
+    {
+      "skuId": 19,
+      "stock": 65,
+      "reserved": 3
+    },
+    {
+      "skuId": 20,
+      "stock": 130,
+      "reserved": 12
+    },
+    {
+      "skuId": 21,
+      "stock": 50,
+      "reserved": 5
+    },
+    {
+      "skuId": 22,
+      "stock": 35,
+      "reserved": 1
+    },
+    {
+      "skuId": 23,
+      "stock": 70,
+      "reserved": 4
     }
   ],
   "bookCategories": [
@@ -138,6 +733,121 @@
     {
       "bookId": 2,
       "categoryId": 2,
+      "priority": 1
+    },
+    {
+      "bookId": 3,
+      "categoryId": 3,
+      "priority": 1
+    },
+    {
+      "bookId": 4,
+      "categoryId": 3,
+      "priority": 2
+    },
+    {
+      "bookId": 5,
+      "categoryId": 1,
+      "priority": 1
+    },
+    {
+      "bookId": 6,
+      "categoryId": 2,
+      "priority": 1
+    },
+    {
+      "bookId": 7,
+      "categoryId": 4,
+      "priority": 1
+    },
+    {
+      "bookId": 8,
+      "categoryId": 4,
+      "priority": 1
+    },
+    {
+      "bookId": 8,
+      "categoryId": 1,
+      "priority": 2
+    },
+    {
+      "bookId": 9,
+      "categoryId": 5,
+      "priority": 1
+    },
+    {
+      "bookId": 10,
+      "categoryId": 3,
+      "priority": 1
+    },
+    {
+      "bookId": 11,
+      "categoryId": 4,
+      "priority": 1
+    },
+    {
+      "bookId": 12,
+      "categoryId": 1,
+      "priority": 1
+    },
+    {
+      "bookId": 13,
+      "categoryId": 2,
+      "priority": 1
+    },
+    {
+      "bookId": 13,
+      "categoryId": 5,
+      "priority": 2
+    },
+    {
+      "bookId": 14,
+      "categoryId": 3,
+      "priority": 1
+    },
+    {
+      "bookId": 15,
+      "categoryId": 2,
+      "priority": 1
+    },
+    {
+      "bookId": 16,
+      "categoryId": 5,
+      "priority": 1
+    },
+    {
+      "bookId": 17,
+      "categoryId": 4,
+      "priority": 1
+    },
+    {
+      "bookId": 18,
+      "categoryId": 1,
+      "priority": 1
+    },
+    {
+      "bookId": 19,
+      "categoryId": 5,
+      "priority": 1
+    },
+    {
+      "bookId": 19,
+      "categoryId": 2,
+      "priority": 2
+    },
+    {
+      "bookId": 20,
+      "categoryId": 6,
+      "priority": 1
+    },
+    {
+      "bookId": 21,
+      "categoryId": 3,
+      "priority": 1
+    },
+    {
+      "bookId": 22,
+      "categoryId": 1,
       "priority": 1
     }
   ],
