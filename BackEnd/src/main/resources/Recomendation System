@@ -1,0 +1,41 @@
+Recomendation System 
+Có 2 kiểu chính: 
+	
+	Hệ thống giựa trên nội dung: gợi ý dựa trên đặc tính bằng cách sắp xếp sản phẩm thành từng nhóm hoặc đi tìm đặc trưng => tuy nhiên cách này lại không không phụ hợp với một số sản phẩm không thể xác định được những điều này.
+
+	Lọc cộng tác (Collaborative filltering): dựa vào điểm tương đồng giữa các người dùng để đưa ra gợi ý. Ví dụ: người dùng A,B,C cùng thích một ca sĩ X, và B,C cùng thích ca sĩ Y. mặc dù chưa có dữ liệu cho thấy A có quan tâm đến Ca sĩ Y nhưng dựa trên thông tin của BC hệ thống có thể dự đoán rằng A cũng thích Y và gợi ý 
+
+Ma trận tiện ích
+	xây dựng dựa trên trọng số của user và items dựa trên ma trận 
+
+	có 2 hướng tiếp cận phổ biến để xác định giá trị đánh giá cho một cặp (user, item) trong ma trận tiện ích: 
+		- Hướng 1: khuyến khích đánh giá, tuy nhiên hướng tiếp cận này lại có hạn chế, gây ra thiên lệch bởi những người sẵn sàng đánh giá.
+		- Hướng 2: dựa trên hành vi người dùng. Nếu người dùn xem sản phẩm đó lâu hơn hoặc bâm like ta có thể dựa trên điều đó để xây dựng. trọng số trong ma trận có thể là 1 0 -1 với ý nghĩa thích, chưa có thông tin hoặc không thích. đồng thời cũng có thể để giá trị các cặp trong ma trận >1 với ý nghĩa là thời gian người dung xem một sản phẩm nào đó
+
+Hệ Thống dựa trên nội dung (Content-based recommendation system):
+	- Bước 1 : xây dựng profile cho sản phẩm, được mô tả bằng 1 vector đặc trưng x.
+	- Bước 2 : xây dựng mô hình người dùng. Hệ thống giả định sở thích của mỗi người dùng là một hàm tuyến tính có thể tính được. Với mỗi người dùng chúng ta cần tìm trọng số w và b riêng biệt
+
+
+
+Lọc cộng tác(Collaborative filtering - CF)
+Lọc cộng tác lân cận (neighborhood-based collaborative filtering - NBCF)
+	- ý tưởng: xác định mức độ quan tâm của một người dùng tới một sản phẩm dựa trên những người dùng có hành vi tương tự. việc xác định sự tương tự giữa những người dùng có thể xác định thông qua mức độ quan tâm của họ tới sản phẩm khác mà hệ thống đã biết
+	- có 2 câu hỏi chính khi xây dựng một hệ thống lọc cộng tác dựa trên lân cận: 
+		- làm thế nào để xác định được sử tương tự giữa 2 người dùng ? 
+		- khi đã xác định được các người dùng có hành vi gần giống nhau làm sao để dự đoán mức độ quan tâm của một người dùng lên sản phẩm
+
+	- có 2 hướng tiếp cận chính
+		- lọc cộng tác người dùng (user - user collaborative filtering): xác định mức độ quan tâm của mỗi người dùng tới một sản phẩm dựa trên mức độ quan tâm của những người dùng tương tự tới sản phẩm đó.
+		- Lọc cộng tác sản phẩm (item - item collaborative filtering): xác định độ tương tự giữa các sản phẩm, từ đó gợi ý một sản phẩm tương tự nhugnwx sản phẩm khác mà người dùng có mức độ quan tâm cao.
+
+	LỌC CỘNG TÁC THEO NGƯỜI DÙNG
+
+	Hàm số do độ tương tự: 
+		Cos_similarity (u1,u2) = cos (u1,u2) = u1u2 / |u1||u2|
+
+
+Lọc cộng tác phân tích ma trận (Matrix Factorization hoặc matrix decomposition)
+
+	- giải quyết vấn đề thông qua các biến ẩn Lantent Factor
+	lọc cộng tác phân tích ma trận
