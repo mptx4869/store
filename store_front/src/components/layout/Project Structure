@@ -1,0 +1,62 @@
+Giai đoạn triển khai hệ thống được hướng dẫn bởi thiết kế kiến ​​trúc và phương pháp được nêu trong các chương trước. Thông qua cấu trúc mô-đun và có thể mở rộng, quy trình phát triển được chia thành các lớp riêng biệt nhưng có liên kết với nhau: giao diện lối vào, dịch vụ phụ trợ, lược đồ cơ sở dữ liệu và công cụ đề xuất độc lập. Chương này trình bày mô tả chuyên sâu về cách triển khai từng mô-đun và đánh giá hiệu suất chức năng cũng như chất lượng đề xuất của hệ thống.
+
+
+
+Nhắm đảm bả những yêu cầu quan trọng của hệ thống như khả năng mở rộng, khả năng bảo trì và sự rõ ràng trong luồng giữ liệu, mã nguồn của hệ thống được thiết kế để phân thành hai khối mã nguồn độc lập là Backend và Frontend. Việc tổ chức file và thư mục tuân thủ nghiêm ngặt các nguyên tác kiến trúc phần mềm tiêu chuẩn
+
+Server side
+
+Hệ thống server được phát triển trên nền tảng springBoot, áp dụng kiến trúc phần lớp và vận dụng mô hình MVC (Model-View-Controller) thích ứng cho REStful API. Mỗi gói đại diện cho một tầng chức năng riêng biệt, đảm bảo nguyên tác kiến trúc separation of concern.
+Controller(Presentation layer) : Đóng vai trò là điểm tiếp nhận các yêu cầu Http từ phía client, đồng thời xác thực dữ liệu đầu vào, điều hướng request đến các dịch vụ xử lý tương ứng và trả về phản hồi dưới dạng json.
+Service (Business logic layer): là tầng logic nghiệp vụ cốt lõi của hệ thống. Ở đây, các các tính toán, cơ chế xử lý quy trình nghiệp vụ cà các database transaction nhằm đảm bảo tính toàn vẹn của dữ liệu trước khi lưu trữ và đảm bảo quy trình nghiệp vụ được xử lý đúng cách.
+Repository (Data Access layer) Gồm các interface đóng vai trò cầu nối trực tiếp giữa service với database. Tầng này trừu tượng hóa các câu lệnh SQL, cung cấp các function truy xuất và thao tác giữ liệu cho service, nhờ vậy đảm bảo được service chỉ tập trung và các logic nghiệp vụ.
+Models (Entities): Các đối tượng ánh xạ trức tiếp tới các bảng trong database, hỗ trợ Repository thao tác với database dễ dàng hơn.
+DTO(Data transfer Objects): đây là các đối tượng được thiết kế riêng để truyển tải dữ liệu giữa các tầng nội bộ và phản hồi API. Nhờ vảo DTO, hệ thống ẩn được cấu trúc dữ liệu thực tế của hệ thống, tăng cường bảo mật, đơn gián hóa quá trình validation nhờ vào việc chỉ cần validation trên dto và tối ưu hóa quá trình truyền tải.
+Exeption: đây là bộ xử lý các lỗi  phát sinh trong quá trình vận hành (như lỗi dữ liệu, logic), các lỗi được bắt và trả về dưới dạng response chuẩn hóa.
+Test: nơi chứa mã nguồn kiểm thử của hệ thống (Unit Test và Integration Test ), bao gòm các kịch bản kiểm thử API nhằm đảm bảo độ tin cậy của phần mềm và nắm bắt nhanh các lỗi xảy ra mỗi lần chỉnh sửa nhằm đảm bảo không phát sinh lỗi ngoài y muốn.
+
+Client Side
+
+Ứng dụng phía người dùng được phát triển bằng ReactJS theo Kiến trúc Hướng Thành phần (Component-Based Architecture), cho phép chia nhỏ giao diện thành các đơn vị độc lập để dễ dàng tái sử dụng và quản lý.
+
+api (Service Integration): Đóng gói các logic gọi API (sử dụng Axios) tách biệt khỏi giao diện. Cách tổ chức này giúp tập trung hóa việc quản lý endpoint và xử lý các cấu hình HTTP chung (như đính kèm Token xác thực).
+
+components: Chứa các thành phần giao diện nhỏ (UI Components) có tính tái sử dụng cao (Button, Modal, Input...), là nền tảng cốt lõi của kiến trúc Component-based.
+
+pages: Đại diện cho các "Views" hoặc màn hình chức năng cụ thể (Home, Cart, Checkout), nơi tập hợp các components để tạo nên trải nghiệm người dùng hoàn chỉnh.
+
+store (State Management): Áp dụng mô hình Global State Management (thông qua Context API hoặc Redux). Thư mục này chịu trách nhiệm lưu trữ và đồng bộ trạng thái toàn cục của ứng dụng (như thông tin user đăng nhập, số lượng giỏ hàng) xuyên suốt các trang mà không cần truyền dữ liệu thủ công qua nhiều cấp.
+
+utils: Các hàm tiện ích bổ trợ dùng chung.
+
+
+4.2. Project Structure
+To ensure critical system requirements such as scalability, maintainability, and clarity in data flow, the system's source code is designed to be partitioned into two independent codebases: Backend and Frontend. The file and directory organization strictly adheres to standard software architectural principles.
+
+4.2.1. Server-side (Backend)
+The server-side system is developed on the Spring Boot platform, applying Layered Architecture and utilizing the MVC (Model-View-Controller) model adapted for RESTful APIs. Each package represents a distinct functional layer, ensuring the architectural principle of Separation of Concerns.
+
+Controller (Presentation Layer): Acts as the entry point for HTTP requests from the client. It is responsible for validating input data, routing requests to the corresponding processing services, and returning responses in JSON format.
+
+Service (Business Logic Layer): Constitutes the core business logic layer of the system. Here, calculations, business process handling mechanisms, and database transactions are executed to ensure data integrity before storage and guarantee that business processes are executed correctly.
+
+Repository (Data Access Layer): Comprises interfaces that act as a direct bridge between the Service layer and the Database. This layer abstracts SQL statements and provides functions for data access and manipulation for the Service, thereby ensuring the Service layer focuses solely on business logic.
+
+Models (Entities): Objects that map directly to database tables, assisting the Repository in manipulating the database more easily.
+
+DTO (Data Transfer Objects): Objects specifically designed to transfer data between internal layers and API responses. Thanks to DTOs, the system encapsulates the actual internal data structure, enhances security, simplifies the validation process (by validating only on the DTO), and optimizes the transmission process.
+
+Exception: Handles errors arising during operation (such as data errors or logic errors). These errors are caught and returned as standardized responses.
+
+Test: Contains the system's testing source code (Unit Test and Integration Test), including API testing scenarios to ensure software reliability and rapidly detect errors occurring during modifications, ensuring no unintended bugs arise.
+
+4.2.2. Client-side (Frontend)
+The client-side application is developed using ReactJS following the Component-Based Architecture, allowing the interface to be broken down into independent units for easy reuse and management.
+
+api (Service Integration): Encapsulates API calling logic (using Axios) separate from the user interface. This organization helps centralize endpoint management and handle common HTTP configurations (such as attaching Authentication Tokens).
+
+components: Contains highly reusable small UI components (Button, Modal, Input...), serving as the core foundation of the Component-based architecture.
+
+pages: Represents specific "Views" or functional screens (Home, Cart, Checkout), where components are aggregated to create a complete user experience.
+
+store (State Management): Applies the Global State Management model (via Context API or Redux). This directory is responsible for storing and synchronizing the global state of the application (such as logged-in user information, shopping cart count) throughout the pages without the need to manually pass data through multiple levels.

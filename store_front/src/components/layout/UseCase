@@ -1,0 +1,18 @@
+Sơ đồ ca sử dụng là một công cụ mô hình hóa trực quan được sử dụng để thể hiện sự tương tác giữa
+người dùng và hệ thống để thực hiện các nhiệm vụ cụ thể. Nó là một phần của bộ UML và được
+chủ yếu được sử dụng trong giai đoạn đầu của phân tích hệ thống. Bằng cách phác thảo ai có thể làm gì
+trong hệ thống, sơ đồ cung cấp cái nhìn tổng quan ở mức độ cao về các yêu cầu chức năng
+từ quan điểm của người dùng.
+Loại sơ đồ này đặc biệt hữu ích cho việc làm rõ và truyền đạt các hệ thống hành vi tạm thời đối với cả các bên liên quan về kỹ thuật và phi kỹ thuật. Mỗi ca sử dụng mô tả một
+mục tiêu hoặc tương tác người dùng riêng biệt, chẳng hạn như tạo đặt chỗ hoặc quản lý thông tin nhà hàng giao phối. Những tương tác này thường phản ánh các hoạt động chính như tạo, xem, chỉnh sửa, hoặc xóa bản ghi (CRUD). Sơ đồ cũng giúp xác định các vai trò khác nhau của người dùng, chẳng hạn như thực khách và quản trị viên nhà hàng cũng như ranh giới của mỗi vai trò được phép thực hiện
+làm trong hệ thống
+
+trong giai đoạn phát triển ban đầu của hầu hết các phần mềm, usecase là một tài liệu vô cùng quan trọng. Nó cung cấp cái nhìn tổng quan nhất về hệ thống bao gồm vai trò và phạm vi của các Actor, funciton dự kiến cũng như cách mà chúng tương tác với nhau bên trong hệ thống.
+
+Usecase trên biểu trị rõ tương tác của các Actor và function bên trong hệ thống và hướng phát triển tập trung vào cung cấp các tính năng thiết yếu cho một hệ thống ecommerce. Đối với customer, hệ thống chú trọng vào các tính năng mua sắm như view books, quản lý giỏ hàng và thông tin cá nhân, search books và thực hiện checkout theo quy trình được thiết kế. Đồng thời cung cấp các công cụ quản lý tiêu chuẩn cho admin bao gồm quản lý sách, đơn hàng, khách hàng giao diện thống kê dữ liệu. Các chức năng quản lý của cả customer và admin đều đảm bảo có đủ các chức năng quản lý thiết yếu nhất như thêm, sửa, xóa và đặc biệt đối với khách hàng cho phép đăng ký tài khoản mới. Để các chức năng này hoạt động đúng và các Actor không thực hiện sai phạm vi quyền, cơ chế xác thực và phân quyền người dùng là điều kiện tiên quyết để thực hiện các chức năng quản lý và checkout, nhờ đó mà đảm bảo được thông tin được bảo mật.
+
+In the initial phase of the software development process, the Use Case document plays a pivotal role. It provides a comprehensive overview of the system, encompassing the roles and operational scopes of the Actors, the anticipated functions, and the interaction mechanisms among them within the system.
+
+The Use Case diagram clearly illustrates the interactions between the Actors and internal functions, with a development focus on delivering essential features for an e-commerce system. For the Customer, the system emphasizes shopping functionalities such as viewing books (View Books), searching for books (Search Books), managing the shopping cart, managing personal information, and executing payments (Checkout) according to the designed workflow. Simultaneously, the system provides standard management tools for the Administrator (Admin), including the management of books, orders, customer information, and a data statistics interface.
+
+The management function groups for both the Customer and the Administrator are guaranteed to include all essential operations such as adding, editing, and deleting data; notably, the system enables customers to register new accounts. To ensure these functions operate correctly and prevent Actors from performing actions outside their authorized scope, user authentication and authorization mechanisms are established as prerequisites for management and checkout functions, thereby ensuring the security of system information.

@@ -1,0 +1,24 @@
+Major Limitation And Operational changllanges of barcodes System
+
+Một số nghiên cứu đã xác định được một số hạn chế cố hữu và thách thức vận hành đáng kể liên quan đến việc triển khai và duy trì các hệ thóng quản lý dựa trên mã vạch, đặc biệt là trong môi trường kho hàng và tự động hóa.
+
+Limitations in Readability and Physical Constraints
+Những hạn chế về khả năng đọc mã và rào cản vật lý luôn là điều dễ thấy nhất và ảnh hường trực tiếp trong quá trình quả lý kho. Do vậy, đây cũng là những vẫn đề mà các doanh nghiệp luôn xem xét đầu tiên khi muốn áp dụng mã vạch vào quy trình quản lý.
+	Yêu cầu về Đường ngắm: Mã vạch yêu cầu phải có đường ngắm trực tiếp giữa mã vạch và thiết bị đọc để quét thành công và khoảng cách đọc cũng rất ngắn.Mặc dù thời gian cho một chu kỳ đọc mã vạch là không quá dài (trung bình 24.479 giây theo một nghiên cứu về kho hàng lạnh),nhưng những hạn chế này đang giới hạn tính linh hoạt của việc vận hành do không cho phép đọc đồng thời nhiều mặt hàng hoặc đọc xuyên qua các vật liệu khác nhau.
+	Môi trường và chất lượng mã vạch: Môi trường vẫn hành và chất liệu mã vạch cũng rất quan trọng và có tác động lớn đến quá trình vận hành. Mã vạch dẽ bị mòn, hư hỏng và nhiểm bẩn do môi trường vận hành và chất liệu của mã vạch, khiến chúng không còn có thể đọc được nữa.
+	Hạn chế về dung lượng dữ liệu: Do giới hạn về mặt công nghệ, mã vạch 1D truyền thống chỉ có thể giữa từ 8-15 ký tự, một con số rất nhỏ dữ liệu có thể có thể đọc bằng thiết bị đọc. Mắc dù mã vạch 2D hiện đã có thể chứa nhiều dữ liệu hơn nhưng vẫn còn kém linh hoạt do thông tin trong mã không thể thay đổi sau khi in ra.
+
+Accuracy Challenges and Inventory Discrepancies
+Mức độ chính xác và sai lệch là một trong số những tiêu chí tối quan trọng của của mọi công nghệ hiện hành, vì thế khảo sát độ chính xác của barcode là bước không thể bỏ qua. Mặc dù mục tiêu của mã vạch là nâng cao độ chính xác, nhưng có rất nhiều thách thức có thể cả trở mục tiêu này.
+	Tỷ lệ lỗi: Mặc dù được sử dụng rộng rãi để giảm thiêu sai sót quản lý kho, nhưng các nghiên cứu thực nghiệm cho thấy tỷ lệ lỗi quét vẫn ở mức đáng kể, đặc biệt là trong môi trường vận hành phức tạp. Theo một nghiên cứu so sánh, tỷ lệ lỗi quét mã vạch được ghi nhận là 45.5% (91 lỗi trên 200 lần do). Các lỗi phổ biến bao gồm nhãn bị thiếu (chiếm 45 lỗi), nhãn không đọc được (24 lỗi), và lỗi máy quét (17 lỗi)
+	Sai số trong nhập liệu thủ công: Các doanh nghiệp ứng dụng mã vạch vào hệ thống quản lý nhằm giảm thiểu các sai số do nhập liệu thủ công gây ra, nhưng thống kê ở trên cho thấy tỷ lệ lỗi do các nguyên nhân liên quan đến mã vạch và máy quét chiếm một phần đáng kể, điều này buộc nhân viên phải thực hiện nhập số seri bằng tay dẫn đến nguy cơ sai sót.
+	Sai lệch số dư tồn kho: Trong các quy trình hiện tại (ví dụ: PDR picking), vị trí lưu trữ không được chuyển giao và sản phẩm không được tiêu thụ (consumed) kịp thời trong hệ thống sau khi thu thập. Điều này làm sai lệch số dư tồn kho, khiến hệ thống hiển thị sản phẩm vẫn còn trên kệ trong khi thực tế chúng đã được lấy đi.
+
+Implementation and System Integration Challenges
+Việc triển khai hệ thống mã vạch không chỉ là vấn đề kỹ thuật mà còn liên quan đến chi phí, xây dựng nhân sự, và hệ thống quản lý. 
+	chi phí: Chi phí: Việc triển khai đòi hỏi đầu tư ban đầu vào phần cứng/phần mềm và chi phí bảo trì thường xuyên để thay thế thiết bị hoặc đảm bảo độ chính xác.
+	Yêu cầu đào tạo nhân sự và năng lực vận hành: nhân viên cần được đào tạo để sử dụng phần mềm và máy quét một cách hiệu quả, giảm thiểu lỗi do thao tác sai dẫn đến sai sót trong hệ thống.
+	Thiếu quy trình tối ưu hóa: Nghiên cứu điển hình cho thấy sự thiếu hụt các quy trình thường xuyên để tối ưu hóa vị trí lưu trữ hoặc loại bỏ các mặt hàng lỗi thời. Điều này dẫn đến các lộ trình lấy hàng kém hiệu quả, khi các mặt hàng thường xuyên sử dụng không được đặt ở vị trí tối ưu một cách có hệ thống
+
+
+	

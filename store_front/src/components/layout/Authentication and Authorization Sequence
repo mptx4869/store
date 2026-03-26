@@ -1,0 +1,23 @@
+Bảo mật là một cơ chế then chốt nhằm đảm bảo tài nguyên hệ thống bởi các Actor hợp lệ và có thẩm quyền. Quy trình này đống vai trò nền tảng trong viêc kiểm soát, duy trì tính toàn vẹn dữ liệu và bảo vệ quyền riêng tư của người dùng. (minh họa ở hình 5)
+
+Quy trình được chia thành hai giai đoạn chính:
+
+Giai đoạn 1: Xác thực Người dùng (Authentication) Quy trình bắt đầu khi người dùng gửi thông tin đăng nhập thông qua Ứng dụng Client. Server thực hiện truy vấn Cơ sở dữ liệu để lấy bản ghi người dùng tương ứng. Thay vì lưu trữ mật khẩu dưới dạng văn bản thuần (plain text), hệ thống thực hiện so khớp mật khẩu được gửi lên với chuỗi mã hóa (hash) đã được lưu trữ an toàn. Khi xác thực thành công, hệ thống sẽ tạo ra một Token truy cập (dự kiến sử dụng JWT) chứa thông tin định danh và vai trò của người dùng. Token này được trả về cho Client và đóng vai trò như một "chìa khóa" cho các request tiếp theo.
+
+Giai đoạn 2: Phân quyền và Kiểm soát Truy cập (Authorization) Khi người dùng cố gắng truy cập vào một tài nguyên được bảo vệ (ví dụ: Trang quản trị Admin), Client sẽ đính kèm Token truy cập vào yêu cầu gửi đi. server trước tiên sẽ kiểm tra tính hợp lệ và thời hạn của Token. Tiếp theo, hệ thống áp dụng cơ chế Kiểm soát truy cập dựa trên vai trò (RBAC) bằng cách xác minh xem vai trò được gán cho người dùng có đủ quyền hạn để thực hiện hành động đó hay không.
+
+Nếu được ủy quyền, hệ thống sẽ truy xuất và trả về dữ liệu.
+
+Nếu người dùng thiếu quyền hạn cần thiết, hệ thống sẽ trả về lỗi "Forbidden" (bị cấm), ngăn chặn tuyệt đối các hành vi leo thang đặc quyền trái phép.
+
+Security acts as a pivotal mechanism ensuring that system resources are accessed by legitimate and authorized Actors. This process plays a foundational role in controlling access, maintaining data integrity, and safeguarding user privacy (as illustrated in Figure 5).
+
+The process is divided into two primary phases:
+
+Phase 1: User Authentication The workflow initiates when the user submits login credentials via the Client Application. The Server queries the Database to retrieve the corresponding user record. Instead of storing passwords in plain text, the system compares the submitted password against the securely stored hash string. Upon successful authentication, the system generates an Access Token (expected to use JWT) containing the user's identity and role information. This token is returned to the Client and serves as a "key" for subsequent requests.
+
+Phase 2: Authorization and Access Control When a user attempts to access a protected resource (e.g., the Admin Dashboard), the Client attaches the Access Token to the outgoing request. The Server first validates the integrity and expiration of the Token. Subsequently, the system applies the Role-Based Access Control (RBAC) mechanism by verifying whether the assigned user role possesses sufficient permissions to perform the requested action.
+
+If authorized, the system retrieves and returns the data.
+
+If the user lacks the necessary permissions, the system returns a "Forbidden" error, strictly preventing unauthorized privilege escalation.
