@@ -1,16 +1,22 @@
 import { useEffect, useState } from 'react';
-import { BookCard } from '../components/features';
+import { BookCarousel } from '../components/features';
 import bookService from '../services/bookService';
+import recommendationService from '../services/recommendationService';
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useCart } from '../context';
+import { useCart, useAuth } from '../context';
 
 function HomePage() {
   const { addToCart } = useCart();
+  const { user } = useAuth();
 
   const [newBooks, setNewBooks] = useState([]);
   const [isLoadingNew, setIsLoadingNew] = useState(true);
   const [newError, setNewError] = useState('');
+
+  const [recommendedBooks, setRecommendedBooks] = useState([]);
+  const [isLoadingRec, setIsLoadingRec] = useState(true);
+  const [recError, setRecError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -33,12 +39,38 @@ function HomePage() {
       }
     };
 
+    const loadRecommendations = async () => {
+      setIsLoadingRec(true);
+      setRecError('');
+      try {
+        const usernameToFetch = user?.username || 'feacb58b496bae6c38aa1b07651de21a';
+        const validBooks = await recommendationService.getRecommendations(usernameToFetch, 10);
+
+        console.log('Recommendation API Result:', validBooks);
+
+        if (validBooks.length === 0) {
+          throw new Error('No recommendations available');
+        }
+
+        if (isMounted) setRecommendedBooks(validBooks);
+      } catch (err) {
+        if (isMounted) {
+          setRecError(err.message || 'Failed to fetch recommendations');
+          console.error('Recommendation API error:', err);
+          setRecommendedBooks([]);
+        }
+      } finally {
+        if (isMounted) setIsLoadingRec(false);
+      }
+    };
+
     loadNewBooks();
+    loadRecommendations();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user?.username]);
 
   const handleAddToCart = (book) => {
     addToCart(book);
@@ -52,11 +84,8 @@ function HomePage() {
         <div className="container mx-auto px-4 py-16">
           <div className="max-w-2xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Discover the World of Books 📚
+              Discover the World of Books
             </h1>
-            {/* <p className="text-xl text-blue-100 mb-8">
-              Thousands of great books are waiting for you. Free shipping for orders from 300,000đ.
-            </p> */}
             <div className="flex flex-wrap gap-4">
               <Link
                 to="/books"
@@ -77,117 +106,37 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Best Sellers Section - temporarily reuse New Books API */}
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                Bestsellers
-              </h2>
-              <p className="text-gray-500 mt-1">
-                Most popular books
-              </p>
-            </div>
-            <Link
-              to="/bestsellers"
-              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 
-                       font-medium"
-            >
-              View All
-              <ChevronRight className="w-5 h-5" />
-            </Link>
-          </div>
+      {/* Recommended for You Section */}
+      <BookCarousel
+        title="Recommended for You"
+        subtitle="Personalized book suggestions"
+        books={recommendedBooks}
+        isLoading={isLoadingRec}
+        error={recError}
+        onAddToCart={handleAddToCart}
+      />
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 
-                        lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-            {isLoadingNew ? (
-              Array.from({ length: 6 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="animate-pulse bg-white rounded-xl shadow-sm p-3 h-56"
-                >
-                  <div className="bg-gray-200 h-32 rounded mb-3" />
-                  <div className="bg-gray-200 h-4 rounded mb-2" />
-                  <div className="bg-gray-200 h-4 w-1/2 rounded" />
-                </div>
-              ))
-            ) : newError ? (
-              <div className="col-span-full bg-red-50 text-red-700 border border-red-100 rounded-lg p-4">
-                {newError}
-              </div>
-            ) : newBooks.length === 0 ? (
-              <div className="col-span-full bg-white rounded-xl shadow-sm p-8 text-center text-gray-600">
-                No books available.
-              </div>
-            ) : (
-              newBooks.map((book) => (
-                <BookCard
-                  key={book.id}
-                  book={book}
-                  onAddToCart={handleAddToCart}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      </section>
+      {/* Best Sellers Section - temporarily reuse New Books API */}
+      <BookCarousel
+        title="Bestsellers"
+        subtitle="Most popular books"
+        books={newBooks}
+        isLoading={isLoadingNew}
+        error={newError}
+        onAddToCart={handleAddToCart}
+        viewAllLink="/bestsellers"
+      />
 
       {/* New Books Section */}
-      <section className="py-12 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                New Books
-              </h2>
-              <p className="text-gray-500 mt-1">
-                Just released this week
-              </p>
-            </div>
-            <Link
-              to="/books?filter=new"
-              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 
-                       font-medium"
-            >
-              View All
-              <ChevronRight className="w-5 h-5" />
-            </Link>
-          </div>
-
-          {newError && (
-            <div className="bg-red-50 text-red-700 border border-red-100 rounded-lg p-4 mb-4">
-              {newError}
-            </div>
-          )}
-
-          {isLoadingNew ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="animate-pulse bg-white rounded-xl shadow-sm p-3 h-56"
-                >
-                  <div className="bg-gray-200 h-32 rounded mb-3" />
-                  <div className="bg-gray-200 h-4 rounded mb-2" />
-                  <div className="bg-gray-200 h-4 w-1/2 rounded" />
-                </div>
-              ))}
-            </div>
-          ) : newBooks.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-600">
-              No new books available.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 
-                          lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-              {newBooks.map((book) => (
-                <BookCard key={book.id} book={book} onAddToCart={handleAddToCart} />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      <BookCarousel
+        title="New Books"
+        subtitle="Just released this week"
+        books={newBooks}
+        isLoading={isLoadingNew}
+        error={newError}
+        onAddToCart={handleAddToCart}
+        viewAllLink="/books?filter=new"
+      />
 
       {/* Promotion Banner */}
       {/* <section className="py-12">

@@ -47,7 +47,5 @@ uploads/
 *.webp
 !**/src/test/resources/**/*.jpg
 !**/src/test/resources/**/*.png
-
 *.log
-*.parquet
-*.csv
+DB/thesis_database.sql

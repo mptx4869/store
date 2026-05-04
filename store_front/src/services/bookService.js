@@ -28,13 +28,34 @@ function mapSku(s) {
   };
 }
 
-function mapBook(b) {
+function mapCategory(cat) {
+  return {
+    id: cat.id,
+    name: cat.name ?? '',
+  };
+}
+
+function mapBookList(b) {
+  const basePrice = b.basePrice ?? 0;
+  return {
+    id: b.id,
+    title: b.title ?? '',
+    image: b.imageUrl ?? null,
+    imageUrl: b.imageUrl ?? null,
+    basePrice,
+    price: basePrice,
+    createdAt: b.createdAt ?? null,
+    categories: Array.isArray(b.categories) ? b.categories.map(mapCategory) : [],
+  };
+}
+
+function mapBookDetail(b) {
   return {
     id: b.id,
     title: b.title,
     subtitle: b.subtitle ??  '',
     description: b.description ?? '',
-    language: b. language ?? '',
+    language: b.language ?? '',
     pages: b.pages ?? 0,
     publishedDate:  b.publishedDate ?? '',
     price: b.price,
@@ -46,9 +67,9 @@ function mapBook(b) {
   };
 }
 
-function mapBookPage(data) {
+function mapBookPage(data, mapFn) {
   return {
-    content: Array.isArray(data?.content) ? data.content.map(mapBook) : [],
+    content: Array.isArray(data?.content) ? data.content.map(mapFn) : [],
     totalElements: data?.totalElements ?? 0,
     totalPages: data?.totalPages ?? 0,
     size: data?.pageable?.pageSize ?? data?.size ?? 0,
@@ -59,10 +80,16 @@ function mapBookPage(data) {
 }
 
 const bookService = {
-  async getBooks() {
+  async getBooks({ page = 0, size = 12, sortBy = 'createdAt', sortDirection = 'DESC' } = {}) {
     try {
-      const data = await api.get('/books');
-      return Array.isArray(data) ? data.map(mapBook) : [];
+      const params = new URLSearchParams({
+        page: String(page),
+        size: String(size),
+        sortBy,
+        sortDirection,
+      });
+      const data = await api.get(`/books?${params}`);
+      return mapBookPage(data, mapBookList);
     } catch (error) {
       throw buildBookError(error);
     }
@@ -71,7 +98,7 @@ const bookService = {
   async getBookById(id) {
     try {
       const data = await api.get(`/books/${id}`);
-      return mapBook(data);
+      return mapBookDetail(data);
     } catch (error) {
       throw buildBookError(error);
     }
@@ -87,7 +114,7 @@ const bookService = {
         sortDirection,
       });
       const data = await api.get(`/books/search?${params}`);
-      return mapBookPage(data);
+      return mapBookPage(data, mapBookList);
     } catch (error) {
       throw buildBookError(error);
     }
@@ -111,7 +138,7 @@ const bookService = {
       });
 
       const data = await api.get(`/books/new?${params}`);
-      return mapBookPage(data);
+      return mapBookPage(data, mapBookList);
     } catch (error) {
       throw buildBookError(error);
     }

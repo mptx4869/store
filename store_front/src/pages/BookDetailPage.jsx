@@ -106,15 +106,15 @@ function BookDetailPage() {
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Image */}
-        <div className="bg-white border rounded-xl p-4 flex items-center justify-center">
+        <div className="bg-white border rounded-xl p-6 flex items-center justify-center" style={{ height: '420px' }}>
           {book.imageUrl ? (
             <img
               src={book.imageUrl}
               alt={book.title}
-              className="max-h-[520px] md:max-h-[580px] w-auto max-w-full object-contain"
+              className="h-full w-auto max-w-full object-contain rounded-lg"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50 rounded-lg">
               <span>No image</span>
             </div>
           )}

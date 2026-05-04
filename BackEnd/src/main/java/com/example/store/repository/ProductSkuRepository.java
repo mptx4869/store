@@ -3,6 +3,7 @@ package com.example.store.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.store.model.ProductSku;
@@ -13,7 +14,9 @@ public interface ProductSkuRepository extends JpaRepository<ProductSku, Long> {
 
     Optional<ProductSku> findByBookIdAndId(Long bookId, Long id);
 
+    @EntityGraph(attributePaths = {"inventory"})
     Optional<ProductSku> findFirstByBookId(Long bookId);
 
+    @EntityGraph(attributePaths = {"inventory"})
     List<ProductSku> findByBookId(Long bookId);
 }

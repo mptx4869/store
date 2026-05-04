@@ -23,6 +23,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	compileOnly 'org.apache.tomcat:annotations-api:6.0.53'
 
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
@@ -37,6 +38,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.flywaydb:flyway-core:10.10.0'
 	implementation 'org.flywaydb:flyway-database-postgresql:10.10.0'
+	implementation 'org.apache.parquet:parquet-hadoop-bundle:1.13.1'
 
 	//Lombok 
 	compileOnly 'org.projectlombok:lombok:1.18.34'
@@ -44,8 +46,8 @@ dependencies {
 
 	//Dev tools
 	runtimeOnly 'org.springframework.boot:spring-boot-devtools'
-	
-}
+
+	}
 
 tasks.named('test') {
 	useJUnitPlatform()

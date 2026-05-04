@@ -1,7 +1,10 @@
 package com.example.store.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +21,10 @@ import com.example.store.dto.SkuUpdateRequest;
 import com.example.store.exception.ConflictException;
 import com.example.store.exception.ResourceNotFoundException;
 import com.example.store.model.Book;
-import com.example.store.model.BookCategory;
 import com.example.store.model.Category;
 import com.example.store.model.Inventory;
 import com.example.store.model.ProductSku;
+import com.example.store.repository.BookCategoryRepository;
 import com.example.store.repository.BookRepository;
 import com.example.store.repository.CategoryRepository;
 import com.example.store.repository.InventoryRepository;
@@ -32,6 +35,9 @@ public class AdminBookService {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private BookCategoryRepository bookCategoryRepository;
     
     @Autowired
     private ProductSkuRepository productSkuRepository;
@@ -44,13 +50,25 @@ public class AdminBookService {
     
     @Transactional(readOnly = true)
     public Page<AdminBookResponse> getAllBooks(Pageable pageable, Boolean includeDeleted) {
-        Page<Book> books;
+        Page<BookRepository.AdminBookListRow> books;
         if (Boolean.TRUE.equals(includeDeleted)) {
-            books = bookRepository.findAll(pageable);
+            books = bookRepository.findAdminBookList(pageable);
         } else {
-            books = bookRepository.findByDeletedAtIsNull(pageable);
+            books = bookRepository.findAdminBookListByDeletedAtIsNull(pageable);
         }
-        return books.map(this::mapToAdminBookResponse);
+
+        if (books.isEmpty()) {
+            return books.map(book -> mapToAdminBookListResponse(book, List.of()));
+        }
+
+        List<Long> bookIds = books.getContent().stream()
+            .map(BookRepository.AdminBookListRow::getId)
+                .toList();
+
+        Map<Long, List<AdminBookResponse.CategoryInfo>> categoriesByBookId = loadCategoryInfo(bookIds);
+        return books.map(book -> mapToAdminBookListResponse(
+                book,
+                categoriesByBookId.getOrDefault(book.getId(), List.of())));
     }
 
     @Transactional(readOnly = true)
@@ -179,6 +197,50 @@ public class AdminBookService {
         Book restored = bookRepository.save(book);
 
         return mapToAdminBookResponse(restored);
+    }
+
+    private Map<Long, List<AdminBookResponse.CategoryInfo>> loadCategoryInfo(List<Long> bookIds) {
+        Map<Long, List<AdminBookResponse.CategoryInfo>> categoriesByBookId = new HashMap<>();
+        if (bookIds.isEmpty()) {
+            return categoriesByBookId;
+        }
+
+        List<BookCategoryRepository.CategoryRow> rows = bookCategoryRepository.findCategoryRowsByBookIdIn(bookIds);
+        for (BookCategoryRepository.CategoryRow row : rows) {
+            Long bookId = row.getBookId();
+            AdminBookResponse.CategoryInfo info = AdminBookResponse.CategoryInfo.builder()
+                    .id(row.getCategoryId())
+                    .name(row.getCategoryName())
+                    .build();
+
+            categoriesByBookId
+                    .computeIfAbsent(bookId, key -> new ArrayList<>())
+                    .add(info);
+        }
+
+        return categoriesByBookId;
+    }
+
+        private AdminBookResponse mapToAdminBookListResponse(
+            BookRepository.AdminBookListRow book,
+            List<AdminBookResponse.CategoryInfo> categories) {
+        return AdminBookResponse.builder()
+                .id(book.getId())
+                .title(book.getTitle())
+                .subtitle(book.getSubtitle())
+                .description(book.getDescription())
+                .language(book.getLanguage())
+                .pages(book.getPages())
+                .publishedDate(book.getPublishedDate())
+                .imageUrl(book.getImageUrl())
+                .basePrice(book.getBasePrice())
+                .defaultSkuId(book.getDefaultSkuId())
+                .createdAt(book.getCreatedAt())
+                .updatedAt(book.getUpdatedAt())
+                .deletedAt(book.getDeletedAt())
+                .categories(categories)
+                .skus(List.of())
+                .build();
     }
 
     private AdminBookResponse mapToAdminBookResponse(Book book) {
@@ -315,9 +377,9 @@ public class AdminBookService {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
         
-        ProductSku sku = productSkuRepository.findById(skuId)
-                .filter(s -> s.getBook().getId().equals(bookId))
-                .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
+        productSkuRepository.findById(skuId)
+            .filter(s -> s.getBook().getId().equals(bookId))
+            .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
         
         book.setDefaultSkuId(skuId);
         bookRepository.save(book);
@@ -373,7 +435,7 @@ public class AdminBookService {
                 Category category = categoryRepository.findById(categoryId)
                         .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + categoryId));
                 
-                BookCategory bookCategory = BookCategory.builder()
+                com.example.store.model.BookCategory bookCategory = com.example.store.model.BookCategory.builder()
                         .book(book)
                         .category(category)
                         .createdAt(java.time.LocalDateTime.now())

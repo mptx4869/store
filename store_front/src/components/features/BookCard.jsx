@@ -15,35 +15,31 @@ function BookCard({ book }) {
     <Link
       to={`/books/${book.id}`}
       className="group bg-white rounded-xl shadow-sm hover:shadow-md 
-                 transition-shadow flex flex-col overflow-hidden"
+                 transition-shadow flex flex-col overflow-hidden h-full"
     >
-      <div className="relative pt-[140%] bg-gray-100 overflow-hidden">
+      {/* Image: fixed height */}
+      <div className="relative h-64 bg-gray-100 overflow-hidden flex-shrink-0">
         <img
           src={book.image || book.imageUrl}
           alt={book.title}
-          className="absolute inset-0 w-full h-full object-cover 
+          className="absolute inset-0 w-full h-full object-contain p-1
                      group-hover:scale-105 transition-transform duration-200"
         />
       </div>
 
-      <div className="p-3 flex flex-col flex-1">
-        <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 mb-1">
+      {/* Content: fixed height, no overflow */}
+      <div className="p-3 flex flex-col" style={{ height: '128px' }}>
+        <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 mb-auto leading-tight">
           {book.title}
         </h3>
-        {book.subtitle && (
-          <p className="text-xs text-gray-500 line-clamp-1 mb-1">
-            {book.subtitle}
-          </p>
-        )}
-
-        <div className="mt-auto flex items-center justify-between gap-2">
-          <span className="text-red-600 font-bold text-base">
-            {formatCurrency(book.price)}
+        <div className="flex items-center justify-between gap-2 mt-2 flex-shrink-0">
+          <span className="text-red-600 font-bold text-sm">
+            {formatCurrency(book.price ?? book.basePrice ?? 0)}
           </span>
           <button
             onClick={handleAddToCart}
             className="p-2 rounded-full bg-blue-50 text-blue-600 
-                       hover:bg-blue-100 transition-colors"
+                       hover:bg-blue-100 transition-colors flex-shrink-0"
           >
             <ShoppingCart className="w-4 h-4" />
           </button>
