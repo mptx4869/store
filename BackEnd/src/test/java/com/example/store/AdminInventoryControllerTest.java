@@ -138,21 +138,26 @@ class AdminInventoryControllerTest {
         headers.setBearerAuth(adminToken);
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
-        ResponseEntity<InventoryListResponse[]> response = restTemplate.exchange(
-            "/admin/inventory/low-stock",
+        ResponseEntity<Map> response = restTemplate.exchange(
+            "/admin/inventory/low-stock?page=0&size=20",
             HttpMethod.GET,
             request,
-            InventoryListResponse[].class
+            Map.class
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().length).isGreaterThan(0);
-        
-        // Verify first item is low stock
-        InventoryListResponse item = response.getBody()[0];
-        assertThat(item.availableStock()).isLessThanOrEqualTo(10);
-        assertThat(item.status()).isIn("LOW_STOCK", "OUT_OF_STOCK");
+        assertThat(response.getBody().get("content")).isInstanceOf(List.class);
+
+        List<?> content = (List<?>) response.getBody().get("content");
+        assertThat(content).isNotEmpty();
+
+        Map<?, ?> item = (Map<?, ?>) content.get(0);
+        Number availableStock = (Number) item.get("availableStock");
+        String status = (String) item.get("status");
+
+        assertThat(availableStock.intValue()).isLessThanOrEqualTo(10);
+        assertThat(status).isIn("LOW_STOCK", "OUT_OF_STOCK");
     }
 
     @Test

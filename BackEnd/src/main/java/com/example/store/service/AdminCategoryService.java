@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import com.example.store.dto.CategoryUpdateRequest;
 import com.example.store.exception.ConflictException;
 import com.example.store.exception.ResourceNotFoundException;
 import com.example.store.model.Category;
+import com.example.store.repository.BookCategoryRepository;
 import com.example.store.repository.CategoryRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,32 +28,36 @@ import lombok.RequiredArgsConstructor;
 public class AdminCategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final BookCategoryRepository bookCategoryRepository;
 
     @Transactional(readOnly = true)
     public Page<AdminCategoryResponse> getAllCategories(int page, int size, String sortBy, String sortDirection) {
         Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-        
-        Page<Category> categories = categoryRepository.findAllWithBookCount(pageable);
-        
-        return categories.map(category -> {
-            Long bookCount = categoryRepository.countBooksByCategoryId(category.getId());
-            return AdminCategoryResponse.fromEntityWithBookCount(category, bookCount);
-        });
+        Sort sort = "bookCount".equalsIgnoreCase(sortBy)
+            ? JpaSort.unsafe(direction, "bookCount")
+            : Sort.by(direction, sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<CategoryRepository.AdminCategoryRow> categories = categoryRepository.findAdminCategoryPage(pageable);
+        return categories.map(row -> new AdminCategoryResponse(
+                row.getId(),
+                row.getName(),
+                row.getDescription(),
+                row.getBookCount(),
+                row.getCreatedAt(),
+                row.getUpdatedAt(),
+                null));
     }
 
     @Transactional(readOnly = true)
     public AdminCategoryResponse getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
-        
-        List<CategoryBookInfo> books = category.getBookCategories().stream()
-            .map(bc -> new CategoryBookInfo(
-                bc.getBook().getId(),
-                bc.getBook().getTitle()
-            ))
-            .collect(Collectors.toList());
-        
+
+        List<CategoryBookInfo> books = bookCategoryRepository.findBookRowsByCategoryId(id).stream()
+                .map(row -> new CategoryBookInfo(row.getBookId(), row.getBookTitle()))
+                .collect(Collectors.toList());
+
         return AdminCategoryResponse.fromEntityWithBooks(category, books);
     }
 

@@ -16,12 +16,12 @@ import com.example.store.exception.InsufficientStockException;
 import com.example.store.exception.ResourceNotFoundException;
 import com.example.store.model.Book;
 import com.example.store.model.CartItem;
+import com.example.store.model.Inventory;
 import com.example.store.model.ProductSku;
 import com.example.store.model.ShoppingCart;
 import com.example.store.model.User;
 import com.example.store.repository.BookRepository;
 import com.example.store.repository.CartItemRepository;
-import com.example.store.repository.InventoryRepository;
 import com.example.store.repository.ProductSkuRepository;
 import com.example.store.repository.ShoppingCartRepository;
 import com.example.store.repository.UserRepository;
@@ -38,22 +38,19 @@ public class CartService {
     private final BookRepository bookRepository;
     private final ProductSkuRepository productSkuRepository;
     private final UserRepository userRepository;
-    private final InventoryRepository inventoryRepository;
 
     public CartService(
         ShoppingCartRepository shoppingCartRepository,
         CartItemRepository cartItemRepository,
         BookRepository bookRepository,
         ProductSkuRepository productSkuRepository,
-        UserRepository userRepository,
-        InventoryRepository inventoryRepository
+        UserRepository userRepository
     ) {
         this.shoppingCartRepository = shoppingCartRepository;
         this.cartItemRepository = cartItemRepository;
         this.bookRepository = bookRepository;
         this.productSkuRepository = productSkuRepository;
         this.userRepository = userRepository;
-        this.inventoryRepository = inventoryRepository;
     }
 
     @Transactional(readOnly = true)
@@ -105,6 +102,8 @@ public class CartService {
         cart.setSubtotal(updatedTotal);
         cart.setTotalItems(totalItems);
 
+        // ShoppingCart.items has cascade=ALL, saving cart persists new items automatically.
+        // Only need explicit save for existing items that were updated.
         shoppingCartRepository.save(cart);
         if (!isNewItem) {
             cartItemRepository.save(cartItem);
@@ -267,19 +266,19 @@ public class CartService {
     }
 
     private void validateStock(ProductSku productSku, int requestedQuantity) {
-        var inventory = inventoryRepository.findByProductSkuId(productSku.getId())
-            .orElse(null);
-        
+        // inventory is eager-loaded via @EntityGraph on ProductSkuRepository.findById
+        Inventory inventory = productSku.getInventory();
+
         int availableStock = 0;
         if (inventory != null) {
             int totalStock = inventory.getStock() != null ? inventory.getStock() : 0;
             int reserved = inventory.getReserved() != null ? inventory.getReserved() : 0;
             availableStock = totalStock - reserved;
         }
-        
+
         if (availableStock < requestedQuantity) {
             throw new InsufficientStockException(
-                "Insufficient stock for SKU " + productSku.getSku() + 
+                "Insufficient stock for SKU " + productSku.getSku() +
                 ". Available: " + availableStock + ", requested: " + requestedQuantity
             );
         }

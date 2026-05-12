@@ -74,6 +74,15 @@ function mapBookPage(data) {
   };
 }
 
+function mapBookCursorPage(data) {
+  return {
+    content: Array.isArray(data?.content) ? data.content.map(mapBook) : [],
+    hasNext: !!data?.hasNext,
+    nextLastId: data?.nextLastId ?? null,
+    nextLastCreatedAt: data?.nextLastCreatedAt ?? null,
+  };
+}
+
 const adminBookService = {
   /**
    * GET /admin/books
@@ -84,6 +93,9 @@ const adminBookService = {
     sortBy = 'createdAt',
     sortDirection = 'DESC',
     includeDeleted = false,
+    deletedOnly,
+    id,
+    title,
   } = {}) {
     try {
       const params = new URLSearchParams({
@@ -93,9 +105,42 @@ const adminBookService = {
         sortDirection,
         includeDeleted:  String(includeDeleted),
       });
+      if (deletedOnly !== undefined) params.set('deletedOnly', String(deletedOnly));
+      if (id !== undefined && id !== null && id !== '') params.set('id', String(id));
+      if (title) params.set('title', title);
 
       const data = await api.get(`/admin/books?${params}`);
       return mapBookPage(data);
+    } catch (error) {
+      throw buildBookError(error);
+    }
+  },
+
+  /**
+   * GET /admin/books/cursor
+   */
+  async getBooksCursor({
+    size = 20,
+    lastId,
+    lastCreatedAt,
+    includeDeleted = false,
+    deletedOnly,
+    id,
+    title,
+  } = {}) {
+    try {
+      const params = new URLSearchParams({
+        size: String(size),
+        includeDeleted: String(includeDeleted),
+      });
+      if (lastId !== undefined && lastId !== null) params.set('lastId', String(lastId));
+      if (lastCreatedAt) params.set('lastCreatedAt', lastCreatedAt);
+      if (deletedOnly !== undefined) params.set('deletedOnly', String(deletedOnly));
+      if (id !== undefined && id !== null && id !== '') params.set('id', String(id));
+      if (title) params.set('title', title);
+
+      const data = await api.get(`/admin/books/cursor?${params}`);
+      return mapBookCursorPage(data);
     } catch (error) {
       throw buildBookError(error);
     }

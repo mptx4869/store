@@ -14,36 +14,65 @@ function AdminBooksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Pagination state
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
+  // Pagination state (cursor)
+  const defaultCursor = { lastId: null, lastCreatedAt: null };
+  const [pageIndex, setPageIndex] = useState(0);
+  const [cursorStack, setCursorStack] = useState([defaultCursor]);
+  const [hasNext, setHasNext] = useState(false);
   const [size] = useState(10);
 
-  // Sort & filter state
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortDirection, setSortDirection] = useState('DESC');
+  // Filter state
   const [includeDeleted, setIncludeDeleted] = useState(false);
+  const [deletedOnly, setDeletedOnly] = useState(false);
+  const [searchId, setSearchId] = useState('');
+  const [searchTitle, setSearchTitle] = useState('');
+  const [searchIdInput, setSearchIdInput] = useState('');
+  const [searchTitleInput, setSearchTitleInput] = useState('');
 
   useEffect(() => {
     loadBooks();
-  }, [page, sortBy, sortDirection, includeDeleted]);
+  }, [pageIndex, includeDeleted, deletedOnly, searchId, searchTitle]);
+
+  const resetPagination = () => {
+    setPageIndex(0);
+    setCursorStack([defaultCursor]);
+  };
 
   const loadBooks = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const result = await adminBookService.getBooks({
-        page,
+      const trimmedId = searchId.trim();
+      const trimmedTitle = searchTitle.trim();
+      const parsedId = trimmedId ? Number(trimmedId) : undefined;
+      const idFilter = Number.isNaN(parsedId) ? undefined : parsedId;
+      const titleFilter = trimmedTitle || undefined;
+
+      const cursor = cursorStack[pageIndex] || defaultCursor;
+
+      const result = await adminBookService.getBooksCursor({
         size,
-        sortBy,
-        sortDirection,
+        lastId: cursor.lastId ?? undefined,
+        lastCreatedAt: cursor.lastCreatedAt ?? undefined,
         includeDeleted,
+        deletedOnly,
+        id: idFilter,
+        title: titleFilter,
       });
 
       setBooks(result.content);
-      setTotalPages(result.totalPages);
-      setTotalElements(result.totalElements);
+      const canGoNext = !!result.hasNext && result.nextLastId && result.nextLastCreatedAt;
+      setHasNext(canGoNext);
+      setCursorStack((prev) => {
+        const next = prev.slice(0, pageIndex + 1);
+        if (canGoNext) {
+          next[pageIndex + 1] = {
+            lastId: result.nextLastId,
+            lastCreatedAt: result.nextLastCreatedAt,
+          };
+        }
+        return next;
+      });
     } catch (err) {
       setError(err.message || 'Could not load book list');
       toast.error(err.message);
@@ -86,19 +115,15 @@ function AdminBooksPage() {
     }
   };
 
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortDirection((prev) => (prev === 'ASC' ? 'DESC' : 'ASC'));
-    } else {
-      setSortBy(field);
-      setSortDirection('DESC');
-    }
-    setPage(0);
-  };
-
-  const getSortIcon = (field) => {
-    if (sortBy !== field) return '↕️';
-    return sortDirection === 'ASC' ? '↑' :  '↓';
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const trimmedId = searchIdInput.trim();
+    const trimmedTitle = searchTitleInput.trim();
+    setSearchId(trimmedId);
+    setSearchTitle(trimmedTitle);
+    setSearchIdInput(trimmedId);
+    setSearchTitleInput(trimmedTitle);
+    resetPagination();
   };
 
   if (isLoading && books.length === 0) {
@@ -119,7 +144,7 @@ function AdminBooksPage() {
             Book Management
           </h1>
           <p className="text-gray-600 mt-1">
-            Total:  {totalElements} books
+            Showing: {books.length} books (newest first)
           </p>
         </div>
 
@@ -133,19 +158,64 @@ function AdminBooksPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4">
-        <label className="inline-flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={includeDeleted}
-            onChange={(e) => {
-              setIncludeDeleted(e.target.checked);
-              setPage(0);
-            }}
-            className="w-4 h-4"
-          />
-          <span className="text-sm text-gray-700">Show deleted books</span>
-        </label>
+      <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
+        <form className="grid sm:grid-cols-4 gap-3" onSubmit={handleSearchSubmit}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Book ID</label>
+            <input
+              type="number"
+              value={searchIdInput}
+              onChange={(e) => setSearchIdInput(e.target.value)}
+              className="input-field w-full"
+              placeholder="Exact ID"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input
+              type="text"
+              value={searchTitleInput}
+              onChange={(e) => setSearchTitleInput(e.target.value)}
+              className="input-field w-full"
+              placeholder="Search by title"
+            />
+          </div>
+          <div className="flex items-end">
+            <button className="btn-primary w-full" type="submit">
+              Search
+            </button>
+          </div>
+        </form>
+
+        <div className="flex flex-wrap gap-6">
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeDeleted}
+              onChange={(e) => {
+                setIncludeDeleted(e.target.checked);
+                if (e.target.checked) setDeletedOnly(false);
+                resetPagination();
+              }}
+              className="w-4 h-4"
+            />
+            <span className="text-sm text-gray-700">Show deleted books</span>
+          </label>
+
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={deletedOnly}
+              onChange={(e) => {
+                setDeletedOnly(e.target.checked);
+                if (e.target.checked) setIncludeDeleted(false);
+                resetPagination();
+              }}
+              className="w-4 h-4"
+            />
+            <span className="text-sm text-gray-700">Only deleted books</span>
+          </label>
+        </div>
       </div>
 
       {/* Error */}
@@ -177,35 +247,23 @@ function AdminBooksPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Image
                   </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('id')}
-                  >
-                    ID {getSortIcon('id')}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    ID
                   </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('title')}
-                  >
-                    Title {getSortIcon('title')}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Title
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Category
                   </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('basePrice')}
-                  >
-                    Base Price {getSortIcon('basePrice')}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Base Price
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     SKUs
                   </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('createdAt')}
-                  >
-                    Created Date {getSortIcon('createdAt')}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Created Date
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                     Actions
@@ -337,40 +395,26 @@ function AdminBooksPage() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {(pageIndex > 0 || hasNext) && (
             <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
               <div className="text-sm text-gray-700">
-                Page {page + 1} / {totalPages}
+                Page {pageIndex + 1}
               </div>
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setPage(0)}
-                  disabled={page === 0}
-                  className="btn-secondary px-3 py-1 text-sm disabled:opacity-50"
-                >
-                  First
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
+                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                  disabled={pageIndex === 0}
                   className="btn-secondary px-3 py-1 text-sm disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1}
+                  onClick={() => setPageIndex((p) => p + 1)}
+                  disabled={!hasNext}
                   className="btn-secondary px-3 py-1 text-sm disabled:opacity-50"
                 >
                   Next
-                </button>
-                <button
-                  onClick={() => setPage(totalPages - 1)}
-                  disabled={page >= totalPages - 1}
-                  className="btn-secondary px-3 py-1 text-sm disabled:opacity-50"
-                >
-                  Last
                 </button>
               </div>
             </div>

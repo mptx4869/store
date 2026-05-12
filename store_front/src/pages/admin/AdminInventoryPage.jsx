@@ -59,8 +59,8 @@ function AdminInventoryPage() {
 
   const loadLowStockCount = async () => {
     try {
-      const lowStockItems = await adminInventoryService.getLowStock();
-      setLowStockCount(lowStockItems.length);
+      const count = await adminInventoryService.getLowStockCount();
+      setLowStockCount(count);
     } catch (err) {
       console.error('Failed to load low stock count:', err);
     }

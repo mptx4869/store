@@ -1,7 +1,5 @@
 package com.example.store.controller;
 
-import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -16,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.store.dto.InventoryListResponse;
+import com.example.store.dto.LowStockCountResponse;
 import com.example.store.dto.InventoryUpdateRequest;
 import com.example.store.service.InventoryService;
 
@@ -44,12 +43,24 @@ public class AdminInventoryController {
     
     /**
      * Get low stock items (stock < threshold)
-     * GET /admin/inventory/low-stock
+     * GET /admin/inventory/low-stock?page=0&size=20
      */
     @GetMapping("/low-stock")
-    public ResponseEntity<List<InventoryListResponse>> getLowStockInventory() {
-        List<InventoryListResponse> lowStock = inventoryService.getLowStockInventory();
+    public ResponseEntity<Page<InventoryListResponse>> getLowStockInventory(
+        @PageableDefault(size = 20, sort = "lastUpdated", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<InventoryListResponse> lowStock = inventoryService.getLowStockInventory(pageable);
         return ResponseEntity.ok(lowStock);
+    }
+
+    /**
+     * Get low stock count
+     * GET /admin/inventory/low-stock/count
+     */
+    @GetMapping("/low-stock/count")
+    public ResponseEntity<LowStockCountResponse> getLowStockCount() {
+        long count = inventoryService.getLowStockCount();
+        return ResponseEntity.ok(new LowStockCountResponse(count));
     }
     
     /**

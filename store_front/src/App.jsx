@@ -130,93 +130,6 @@ function App() {
                 path="/admin"
                 element={
                   <AdminRoute>
-                    <Layout>
-                      <AdminLayout>
-                        <AdminDashboardPage />
-                      </AdminLayout>
-                    </Layout>
-                  </AdminRoute>
-                }
-              />
-
-              <Route
-                path="/admin/users"
-                element={
-                  <AdminRoute>
-                    <Layout>
-                      <AdminLayout>
-                        <AdminUsersPage />
-                      </AdminLayout>
-                    </Layout>
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/users/:userId"
-                element={
-                  <AdminRoute>
-                    <Layout>
-                      <AdminLayout>
-                        <AdminUserDetailPage />
-                      </AdminLayout>
-                    </Layout>
-                  </AdminRoute>
-                }
-              />
-
-              <Route
-                path="/admin/books"
-                element={
-                  <AdminRoute>
-                    <Layout>
-                      <AdminLayout>
-                        <AdminBooksPage />
-                      </AdminLayout>
-                    </Layout>
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/books/new"
-                element={
-                  <AdminRoute>
-                    <Layout>
-                      <AdminLayout>
-                        <AdminBookCreatePage />
-                      </AdminLayout>
-                    </Layout>
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/books/:bookId"
-                element={
-                  <AdminRoute>
-                    <Layout>
-                      <AdminLayout>
-                        <AdminBookDetailPage />
-                      </AdminLayout>
-                    </Layout>
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/books/:bookId/edit"
-                element={
-                  <AdminRoute>
-                    <Layout>
-                      <AdminLayout>
-                        <AdminBookEditPage />
-                      </AdminLayout>
-                    </Layout>
-                  </AdminRoute>
-                }
-              />
-               {/* Admin Routes - Dashboard */}
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
                     <AdminLayout>
                       <AdminDashboardPage />
                     </AdminLayout>
@@ -241,6 +154,16 @@ function App() {
                   <AdminRoute>
                     <AdminLayout>
                       <AdminUsersPage />
+                    </AdminLayout>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/users/:userId"
+                element={
+                  <AdminRoute>
+                    <AdminLayout>
+                      <AdminUserDetailPage />
                     </AdminLayout>
                   </AdminRoute>
                 }

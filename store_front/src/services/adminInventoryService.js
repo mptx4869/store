@@ -66,12 +66,31 @@ const adminInventoryService = {
   },
 
   /**
-   * GET /admin/inventory/low-stock
+   * GET /admin/inventory/low-stock?page=0&size=20&sort=lastUpdated&direction=DESC
    */
-  async getLowStock() {
+  async getLowStock({ page = 0, size = 20, sort = 'lastUpdated', direction = 'DESC' } = {}) {
     try {
-      const data = await api.get('/admin/inventory/low-stock');
-      return Array.isArray(data) ? data. map(mapInventory) : [];
+      const params = new URLSearchParams({
+        page: String(page),
+        size: String(size),
+        sort,
+        direction,
+      });
+
+      const data = await api.get(`/admin/inventory/low-stock?${params}`);
+      return mapInventoryPage(data);
+    } catch (error) {
+      throw buildInventoryError(error);
+    }
+  },
+
+  /**
+   * GET /admin/inventory/low-stock/count
+   */
+  async getLowStockCount() {
+    try {
+      const data = await api.get('/admin/inventory/low-stock/count');
+      return data?.count ?? 0;
     } catch (error) {
       throw buildInventoryError(error);
     }

@@ -2,56 +2,62 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import bookService from '../services/bookService';
 import { BookCard } from '../components/features';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 20;
 
 function BooksPage() {
   const [books, setBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [pageInput, setPageInput] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const searchKeyword = searchParams.get('q');
   const filter = searchParams.get('filter');
 
-  // Reset page when search or filter changes
+  // Reset list when search or filter changes
   useEffect(() => {
-    setCurrentPage(0);
+    setBooks([]);
+    setPage(0);
+    setHasMore(true);
   }, [searchKeyword, filter]);
-
-  // Sync page input with current page
-  useEffect(() => {
-    setPageInput(String(currentPage + 1));
-  }, [currentPage]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      setIsLoading(true);
+      const isFirstPage = page === 0;
+      if (isFirstPage) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
       setError('');
       try {
         let pageData;
         if (searchKeyword) {
-          pageData = await bookService.searchBooks(searchKeyword, currentPage, 20);
+          pageData = await bookService.searchBooks(searchKeyword, page, PAGE_SIZE);
         } else if (filter === 'new') {
-          pageData = await bookService.getNewBooks({ page: currentPage, size: 20 });
+          pageData = await bookService.getNewBooks({ page, size: PAGE_SIZE });
         } else {
-          pageData = await bookService.getBooks({ page: currentPage, size: 20 });
+          pageData = await bookService.getBooks({ page, size: PAGE_SIZE });
         }
 
         if (cancelled) return;
-        setBooks(pageData.content);
-        setTotalPages(pageData.totalPages);
+        setBooks((prev) => (isFirstPage ? pageData.content : [...prev, ...pageData.content]));
+        setHasMore(!!pageData.hasMore);
       } catch (err) {
         if (cancelled) return;
         setError(err.message || 'Could not load book list');
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }
       }
     }
 
@@ -60,28 +66,11 @@ function BooksPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchKeyword, filter, currentPage]);
+  }, [searchKeyword, filter, page]);
 
-  const handlePrevPage = () => {
-    if (currentPage > 0) setCurrentPage(p => p - 1);
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages - 1) setCurrentPage(p => p + 1);
-  };
-
-  const handlePageInputChange = (e) => {
-    setPageInput(e.target.value);
-  };
-
-  const handlePageInputSubmit = (e) => {
-    if (e) e.preventDefault();
-    const pageNum = parseInt(pageInput, 10);
-    if (!isNaN(pageNum) && pageNum > 0 && pageNum <= totalPages) {
-      setCurrentPage(pageNum - 1);
-    } else {
-      setPageInput(String(currentPage + 1)); // reset to valid
-    }
+  const handleLoadMore = () => {
+    if (isLoadingMore || !hasMore) return;
+    setPage((prev) => prev + 1);
   };
 
   if (isLoading && books.length === 0) {
@@ -108,7 +97,7 @@ function BooksPage() {
         {searchKeyword ? `Search Results for "${searchKeyword}"` : (filter === 'new' ? 'New Books' : 'Books')}
       </h1>
 
-      {!books.length ? (
+      {books.length === 0 ? (
         <div className="text-center py-16 text-gray-600">
           No books available.
         </div>
@@ -120,43 +109,20 @@ function BooksPage() {
             ))}
           </div>
 
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="mt-12 flex items-center justify-center gap-4">
-              <button
-                onClick={handlePrevPage}
-                disabled={currentPage === 0}
-                className={`p-2 rounded-lg flex items-center justify-center transition-colors ${currentPage === 0
-                    ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                    : 'text-blue-600 bg-blue-50 hover:bg-blue-100'
-                  }`}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
+          {error && (
+            <div className="mt-8 bg-red-50 border border-red-100 text-red-700 rounded-xl p-4 text-center">
+              {error}
+            </div>
+          )}
 
-              <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2">
-                <span className="text-gray-600 font-medium">Page</span>
-                <input
-                  type="number"
-                  value={pageInput}
-                  onChange={handlePageInputChange}
-                  onBlur={handlePageInputSubmit}
-                  min={1}
-                  max={totalPages}
-                  className="w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-gray-600 font-medium">of {totalPages}</span>
-              </form>
-
+          {hasMore && (
+            <div className="mt-10 flex items-center justify-center">
               <button
-                onClick={handleNextPage}
-                disabled={currentPage >= totalPages - 1}
-                className={`p-2 rounded-lg flex items-center justify-center transition-colors ${currentPage >= totalPages - 1
-                    ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                    : 'text-blue-600 bg-blue-50 hover:bg-blue-100'
-                  }`}
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="btn-secondary px-6 py-3 text-sm disabled:opacity-60"
               >
-                <ChevronRight className="w-5 h-5" />
+                {isLoadingMore ? 'Loading more...' : 'Load more'}
               </button>
             </div>
           )}

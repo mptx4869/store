@@ -56,6 +56,10 @@ public class User {
     @Builder.Default
     private String status = "ACTIVE";
 
+    @Column(name = "total_orders")
+    @Builder.Default
+    private Integer totalOrders = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

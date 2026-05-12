@@ -9,12 +9,16 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.store.dto.AdminBookResponse;
 import com.example.store.dto.BookCreateRequest;
+import com.example.store.dto.CursorPageResponse;
 import com.example.store.dto.BookUpdateRequest;
 import com.example.store.dto.SkuCreateRequest;
 import com.example.store.dto.SkuUpdateRequest;
@@ -38,37 +42,145 @@ public class AdminBookService {
 
     @Autowired
     private BookCategoryRepository bookCategoryRepository;
-    
+
     @Autowired
     private ProductSkuRepository productSkuRepository;
-    
+
     @Autowired
     private InventoryRepository inventoryRepository;
-    
+
     @Autowired
     private CategoryRepository categoryRepository;
-    
+
+    /**
+     * Paginated admin book list.
+     *
+     * Three JPQL query variants replace the old findAdminBookListWithCount which
+     * used CASE WHEN :sortBy = 'x' THEN column END ORDER BY — an expression that
+     * PostgreSQL cannot map to any index, causing filesort over the full result set
+     * at 1M+ books.  Passing Pageable to each JPQL variant lets Spring Data emit a
+     * plain ORDER BY clause, and the COUNT(*) OVER() window function is replaced by
+     * Spring Data's automatic secondary count query on Page return type.
+     */
     @Transactional(readOnly = true)
-    public Page<AdminBookResponse> getAllBooks(Pageable pageable, Boolean includeDeleted) {
-        Page<BookRepository.AdminBookListRow> books;
-        if (Boolean.TRUE.equals(includeDeleted)) {
-            books = bookRepository.findAdminBookList(pageable);
+    public Page<AdminBookResponse> getAllBooks(
+            Pageable pageable,
+            Boolean includeDeleted,
+            Boolean deletedOnly,
+            Long bookId,
+            String title) {
+
+        String titlePattern = (title != null && !title.isBlank())
+                ? ("%" + title.trim().toLowerCase() + "%")
+                : null;
+        boolean onlyDeleted = Boolean.TRUE.equals(deletedOnly);
+        boolean includeAll  = Boolean.TRUE.equals(includeDeleted);
+        if (onlyDeleted) {
+            includeAll = false;
+        }
+
+        Pageable normalizedPageable = normalizeBookPageable(pageable);
+
+        Page<BookRepository.AdminBookListRow> rows;
+        if (onlyDeleted) {
+            rows = bookRepository.findAdminBookListDeletedOnly(bookId, titlePattern, normalizedPageable);
+        } else if (includeAll) {
+            rows = bookRepository.findAdminBookListAll(bookId, titlePattern, normalizedPageable);
         } else {
-            books = bookRepository.findAdminBookListByDeletedAtIsNull(pageable);
+            rows = bookRepository.findAdminBookListActive(bookId, titlePattern, normalizedPageable);
         }
 
-        if (books.isEmpty()) {
-            return books.map(book -> mapToAdminBookListResponse(book, List.of()));
+        if (rows.isEmpty()) {
+            return rows.map(book -> mapToAdminBookListResponse(book, List.of()));
         }
 
-        List<Long> bookIds = books.getContent().stream()
-            .map(BookRepository.AdminBookListRow::getId)
+        List<Long> bookIds = rows.getContent().stream()
+                .map(BookRepository.AdminBookListRow::getId)
                 .toList();
 
         Map<Long, List<AdminBookResponse.CategoryInfo>> categoriesByBookId = loadCategoryInfo(bookIds);
-        return books.map(book -> mapToAdminBookListResponse(
+        return rows.map(book -> mapToAdminBookListResponse(
                 book,
                 categoriesByBookId.getOrDefault(book.getId(), List.of())));
+    }
+
+    /**
+     * Keyset (cursor) variant of the admin book list.
+     *
+     * Sort is always {@code created_at DESC, id DESC}.  Pass {@code lastId}
+     * and {@code lastCreatedAt} from the previous response to continue paging;
+     * omit both for the first page.
+     */
+    @Transactional(readOnly = true)
+    public CursorPageResponse<AdminBookResponse> getAllBooksCursor(
+            int size,
+            Long lastId,
+            LocalDateTime lastCreatedAt,
+            Boolean includeDeleted,
+            Boolean deletedOnly,
+            Long bookId,
+            String title) {
+
+        boolean onlyDeleted = Boolean.TRUE.equals(deletedOnly);
+        boolean includeAll  = Boolean.TRUE.equals(includeDeleted) && !onlyDeleted;
+
+        List<AdminBookResponse> content;
+        boolean hasNext;
+
+        if (lastId == null || lastCreatedAt == null) {
+            // First page: reuse the offset-based query — no LocalDateTime param,
+            // so no null-timestamp/bytea type-inference problem.
+            Pageable firstPage = PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+            Page<AdminBookResponse> page = getAllBooks(firstPage, includeDeleted, deletedOnly, bookId, title);
+            content = page.getContent();
+            hasNext = page.hasNext();
+        } else {
+            // Subsequent pages: cursor is always non-null — safe to pass LocalDateTime.
+            // Pre-build LIKE pattern to avoid CONCAT type-inference bug (lower(bytea)).
+            String titlePattern = (title != null && !title.isBlank())
+                    ? ("%" + title.trim().toLowerCase() + "%")
+                    : null;
+
+            Pageable pageable = PageRequest.of(0, size);
+
+            Slice<BookRepository.AdminBookListRow> slice;
+            if (onlyDeleted) {
+                slice = bookRepository.findAdminBookListDeletedOnlyKeysetNext(
+                        bookId, titlePattern, lastCreatedAt, lastId, pageable);
+            } else if (includeAll) {
+                slice = bookRepository.findAdminBookListAllKeysetNext(
+                        bookId, titlePattern, lastCreatedAt, lastId, pageable);
+            } else {
+                slice = bookRepository.findAdminBookListActiveKeysetNext(
+                        bookId, titlePattern, lastCreatedAt, lastId, pageable);
+            }
+
+            List<BookRepository.AdminBookListRow> rows = slice.getContent();
+            List<Long> bookIds = rows.stream().map(BookRepository.AdminBookListRow::getId).toList();
+            Map<Long, List<AdminBookResponse.CategoryInfo>> categoriesByBookId =
+                    bookIds.isEmpty() ? Map.of() : loadCategoryInfo(bookIds);
+
+            content = rows.stream()
+                    .map(b -> mapToAdminBookListResponse(
+                            b, categoriesByBookId.getOrDefault(b.getId(), List.of())))
+                    .toList();
+            hasNext = slice.hasNext();
+        }
+
+        Long nextLastId = null;
+        LocalDateTime nextLastCreatedAt = null;
+        if (hasNext && !content.isEmpty()) {
+            AdminBookResponse last = content.get(content.size() - 1);
+            nextLastId = last.getId();
+            nextLastCreatedAt = last.getCreatedAt();
+        }
+
+        return CursorPageResponse.<AdminBookResponse>builder()
+                .content(content)
+                .hasNext(hasNext)
+                .nextLastId(nextLastId)
+                .nextLastCreatedAt(nextLastCreatedAt)
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -80,33 +192,29 @@ public class AdminBookService {
 
     @Transactional
     public AdminBookResponse createBook(BookCreateRequest request) {
-        // Create book (publisher removed; single image stored on book)
         Book book = Book.builder()
-            .title(request.getTitle())
-            .subtitle(request.getSubtitle())
-            .description(request.getDescription())
-            .language(request.getLanguage())
-            .pages(request.getPages())
-            .publishedDate(request.getPublishedDate())
-            .imageUrl(request.getImageUrl())
-            .basePrice(request.getBasePrice())
-            .build();
-        
+                .title(request.getTitle())
+                .subtitle(request.getSubtitle())
+                .description(request.getDescription())
+                .language(request.getLanguage())
+                .pages(request.getPages())
+                .publishedDate(request.getPublishedDate())
+                .imageUrl(request.getImageUrl())
+                .basePrice(request.getBasePrice())
+                .build();
+
         book = bookRepository.save(book);
-        
-        // Add categories
+
         if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
             updateBookCategories(book, request.getCategoryIds());
         }
-        
-        // Create SKUs and inventories
+
         Long defaultSkuId = null;
         for (BookCreateRequest.SkuCreateRequest skuRequest : request.getSkus()) {
-            // Check for duplicate SKU
             if (productSkuRepository.findBySku(skuRequest.getSku()).isPresent()) {
                 throw new IllegalArgumentException("SKU already exists: " + skuRequest.getSku());
             }
-            
+
             ProductSku sku = ProductSku.builder()
                     .book(book)
                     .sku(skuRequest.getSku())
@@ -117,27 +225,23 @@ public class AdminBookService {
                     .widthMm(skuRequest.getWidthMm())
                     .heightMm(skuRequest.getHeightMm())
                     .build();
-            
+
             sku = productSkuRepository.save(sku);
-            
-            // Create inventory
+
             int initialStock = skuRequest.getInitialStock() != null ? skuRequest.getInitialStock() : 0;
             Inventory inventory = new Inventory();
             inventory.setProductSku(sku);
             inventory.setStock(initialStock);
             inventory.setReserved(0);
             inventoryRepository.save(inventory);
-            
-            // Set default SKU
+
             if (Boolean.TRUE.equals(skuRequest.getIsDefault()) || defaultSkuId == null) {
                 defaultSkuId = sku.getId();
             }
         }
-        
-        // Update book with default SKU
+
         book.setDefaultSkuId(defaultSkuId);
         book = bookRepository.save(book);
-        
         return mapToAdminBookResponse(book);
     }
 
@@ -145,13 +249,11 @@ public class AdminBookService {
     public AdminBookResponse updateBook(Long bookId, BookUpdateRequest request) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        
-        // Check if book is deleted
+
         if (book.getDeletedAt() != null) {
             throw new IllegalStateException("Cannot update deleted book");
         }
-        
-        // Update fields
+
         book.setTitle(request.getTitle());
         book.setSubtitle(request.getSubtitle());
         book.setDescription(request.getDescription());
@@ -160,14 +262,12 @@ public class AdminBookService {
         book.setPublishedDate(request.getPublishedDate());
         book.setImageUrl(request.getImageUrl());
         book.setBasePrice(request.getBasePrice());
-        
         book = bookRepository.save(book);
-        
-        // Update categories
+
         if (request.getCategoryIds() != null) {
             updateBookCategories(book, request.getCategoryIds());
         }
-        
+
         return mapToAdminBookResponse(book);
     }
 
@@ -175,7 +275,7 @@ public class AdminBookService {
     public void deleteBook(Long bookId, boolean hardDelete) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        
+
         if (hardDelete) {
             bookRepository.delete(book);
         } else {
@@ -187,7 +287,7 @@ public class AdminBookService {
     @Transactional
     public AdminBookResponse restoreBook(Long bookId) {
         Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
 
         if (book.getDeletedAt() == null) {
             throw new ConflictException("Book is not soft deleted");
@@ -195,7 +295,6 @@ public class AdminBookService {
 
         book.setDeletedAt(null);
         Book restored = bookRepository.save(book);
-
         return mapToAdminBookResponse(restored);
     }
 
@@ -212,31 +311,22 @@ public class AdminBookService {
                     .id(row.getCategoryId())
                     .name(row.getCategoryName())
                     .build();
-
             categoriesByBookId
                     .computeIfAbsent(bookId, key -> new ArrayList<>())
                     .add(info);
         }
-
         return categoriesByBookId;
     }
 
-        private AdminBookResponse mapToAdminBookListResponse(
+    private AdminBookResponse mapToAdminBookListResponse(
             BookRepository.AdminBookListRow book,
             List<AdminBookResponse.CategoryInfo> categories) {
         return AdminBookResponse.builder()
                 .id(book.getId())
                 .title(book.getTitle())
-                .subtitle(book.getSubtitle())
-                .description(book.getDescription())
-                .language(book.getLanguage())
-                .pages(book.getPages())
-                .publishedDate(book.getPublishedDate())
                 .imageUrl(book.getImageUrl())
                 .basePrice(book.getBasePrice())
-                .defaultSkuId(book.getDefaultSkuId())
                 .createdAt(book.getCreatedAt())
-                .updatedAt(book.getUpdatedAt())
                 .deletedAt(book.getDeletedAt())
                 .categories(categories)
                 .skus(List.of())
@@ -244,17 +334,18 @@ public class AdminBookService {
     }
 
     private AdminBookResponse mapToAdminBookResponse(Book book) {
+        // findByBookId has @EntityGraph({"inventory"}) — inventory is already loaded
+        // in each SKU; no extra query per SKU is needed.
         List<ProductSku> skus = productSkuRepository.findByBookId(book.getId());
-        
+
         List<AdminBookResponse.SkuInfo> skuInfos = skus.stream()
                 .map(sku -> {
-                    Inventory inventory = inventoryRepository.findByProductSkuId(sku.getId())
-                            .orElse(null);
-                    
-                    int stock = inventory != null ? inventory.getStock() : 0;
-                    int reserved = inventory != null ? inventory.getReserved() : 0;
+                    Inventory inventory = sku.getInventory();
+
+                    int stock     = inventory != null ? inventory.getStock()    : 0;
+                    int reserved  = inventory != null ? inventory.getReserved() : 0;
                     int available = stock - reserved;
-                    
+
                     return AdminBookResponse.SkuInfo.builder()
                             .id(sku.getId())
                             .sku(sku.getSku())
@@ -267,15 +358,15 @@ public class AdminBookService {
                             .build();
                 })
                 .collect(Collectors.toList());
-        
-        // Map categories
-        List<AdminBookResponse.CategoryInfo> categoryInfos = book.getBookCategories().stream()
-                .map(bc -> AdminBookResponse.CategoryInfo.builder()
-                        .id(bc.getCategory().getId())
-                        .name(bc.getCategory().getName())
+
+        List<AdminBookResponse.CategoryInfo> categoryInfos = bookCategoryRepository
+                .findCategoryRowsByBookIdIn(List.of(book.getId())).stream()
+                .map(row -> AdminBookResponse.CategoryInfo.builder()
+                        .id(row.getCategoryId())
+                        .name(row.getCategoryName())
                         .build())
                 .collect(Collectors.toList());
-        
+
         return AdminBookResponse.builder()
                 .id(book.getId())
                 .title(book.getTitle())
@@ -295,23 +386,23 @@ public class AdminBookService {
                 .build();
     }
 
+    // -------------------------------------------------------------------------
     // SKU Management
-    
+    // -------------------------------------------------------------------------
+
     @Transactional
     public AdminBookResponse addSku(Long bookId, SkuCreateRequest request) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        
+
         if (book.getDeletedAt() != null) {
             throw new IllegalStateException("Cannot add SKU to deleted book");
         }
-        
-        // Check duplicate SKU code
+
         if (productSkuRepository.findBySku(request.getSku()).isPresent()) {
             throw new ConflictException("SKU already exists: " + request.getSku());
         }
-        
-        // Create new SKU
+
         ProductSku sku = ProductSku.builder()
                 .book(book)
                 .sku(request.getSku())
@@ -322,44 +413,40 @@ public class AdminBookService {
                 .widthMm(request.getWidthMm())
                 .heightMm(request.getHeightMm())
                 .build();
-        
+
         sku = productSkuRepository.save(sku);
-        
-        // Create inventory
+
         int initialStock = request.getInitialStock() != null ? request.getInitialStock() : 0;
         Inventory inventory = new Inventory();
         inventory.setProductSku(sku);
         inventory.setStock(initialStock);
         inventory.setReserved(0);
         inventoryRepository.save(inventory);
-        
-        // Set as default if requested or if this is the first SKU
+
         if (Boolean.TRUE.equals(request.getIsDefault()) || book.getDefaultSkuId() == null) {
             book.setDefaultSkuId(sku.getId());
             bookRepository.save(book);
         }
-        
+
         return mapToAdminBookResponse(book);
     }
-    
+
     @Transactional
     public AdminBookResponse updateSku(Long bookId, Long skuId, SkuUpdateRequest request) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        
+
         ProductSku sku = productSkuRepository.findById(skuId)
                 .filter(s -> s.getBook().getId().equals(bookId))
                 .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
-        
-        // Check duplicate SKU code (except current)
+
         productSkuRepository.findBySku(request.getSku())
                 .ifPresent(existingSku -> {
                     if (!existingSku.getId().equals(skuId)) {
                         throw new ConflictException("SKU already exists: " + request.getSku());
                     }
                 });
-        
-        // Update SKU
+
         sku.setSku(request.getSku());
         sku.setFormat(request.getFormat());
         sku.setPriceOverride(request.getPriceOverride());
@@ -368,43 +455,39 @@ public class AdminBookService {
         sku.setWidthMm(request.getWidthMm());
         sku.setHeightMm(request.getHeightMm());
         productSkuRepository.save(sku);
-        
+
         return mapToAdminBookResponse(book);
     }
-    
+
     @Transactional
     public AdminBookResponse setDefaultSku(Long bookId, Long skuId) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        
+
         productSkuRepository.findById(skuId)
-            .filter(s -> s.getBook().getId().equals(bookId))
-            .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
-        
+                .filter(s -> s.getBook().getId().equals(bookId))
+                .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
+
         book.setDefaultSkuId(skuId);
         bookRepository.save(book);
-        
         return mapToAdminBookResponse(book);
     }
-    
+
     @Transactional
     public AdminBookResponse deleteSku(Long bookId, Long skuId) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + bookId));
-        
+
         ProductSku sku = productSkuRepository.findById(skuId)
                 .filter(s -> s.getBook().getId().equals(bookId))
                 .orElseThrow(() -> new ResourceNotFoundException("SKU not found for this book"));
-        
-        // Check if this is the last SKU
+
         List<ProductSku> allSkus = productSkuRepository.findByBookId(bookId);
         if (allSkus.size() <= 1) {
             throw new ConflictException("Cannot delete the last SKU. Book must have at least one SKU.");
         }
-        
-        // Check if this is the default SKU
+
         if (sku.getId().equals(book.getDefaultSkuId())) {
-            // Set another SKU as default
             ProductSku newDefaultSku = allSkus.stream()
                     .filter(s -> !s.getId().equals(skuId))
                     .findFirst()
@@ -412,39 +495,62 @@ public class AdminBookService {
             book.setDefaultSkuId(newDefaultSku.getId());
             bookRepository.save(book);
         }
-        
-        // Delete inventory first (foreign key)
+
         inventoryRepository.findByProductSkuId(skuId).ifPresent(inventoryRepository::delete);
-        
-        // Delete SKU
         productSkuRepository.delete(sku);
-        
         return mapToAdminBookResponse(book);
     }
-    
-    /**
-     * Helper method to update book categories
-     */
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
     private void updateBookCategories(Book book, List<Long> categoryIds) {
-        // Clear existing categories
-        book.getBookCategories().clear();
-        
-        // Add new categories
+        bookCategoryRepository.deleteByBookId(book.getId());
+
         if (categoryIds != null && !categoryIds.isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(categoryIds);
+            Map<Long, Category> categoryMap = new HashMap<>();
+            for (Category category : categories) {
+                categoryMap.put(category.getId(), category);
+            }
+
+            List<com.example.store.model.BookCategory> links = new ArrayList<>();
             for (Long categoryId : categoryIds) {
-                Category category = categoryRepository.findById(categoryId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + categoryId));
-                
-                com.example.store.model.BookCategory bookCategory = com.example.store.model.BookCategory.builder()
+                Category category = categoryMap.get(categoryId);
+                if (category == null) {
+                    throw new ResourceNotFoundException("Category not found with id: " + categoryId);
+                }
+                links.add(com.example.store.model.BookCategory.builder()
                         .book(book)
                         .category(category)
-                        .createdAt(java.time.LocalDateTime.now())
-                        .build();
-                
-                book.getBookCategories().add(bookCategory);
+                        .createdAt(LocalDateTime.now())
+                        .build());
             }
+            bookCategoryRepository.saveAll(links);
         }
-        
-        bookRepository.save(book);
+    }
+
+    /**
+     * Rebuilds a Pageable with validated sort properties so that an unknown field
+     * from the request cannot reach JPQL and cause a query parsing error.
+     * Valid properties map directly to Book entity field names.
+     */
+    private Pageable normalizeBookPageable(Pageable pageable) {
+        if (!pageable.getSort().isSorted()) {
+            return pageable;
+        }
+        List<Sort.Order> normalized = pageable.getSort().stream()
+                .map(o -> {
+                    String prop = switch (o.getProperty()) {
+                        case "id"        -> "id";
+                        case "title"     -> "title";
+                        case "basePrice" -> "basePrice";
+                        default          -> "createdAt";
+                    };
+                    return new Sort.Order(o.getDirection(), prop);
+                })
+                .toList();
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(normalized));
     }
 }

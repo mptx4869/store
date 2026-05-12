@@ -1,9 +1,9 @@
 package com.example.store.controller;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Slice;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +25,7 @@ public class BookController {
     }
 
     @GetMapping
-    public Page<BookListResponse> getBooks(
+    public Slice<BookListResponse> getBooks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -40,7 +40,7 @@ public class BookController {
     }
 
     @GetMapping("/new")
-    public Page<BookListResponse> getNewBooks(
+    public Slice<BookListResponse> getNewBooks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -60,7 +60,7 @@ public class BookController {
     }
 
     @GetMapping("/search")
-    public Page<BookListResponse> searchBooks(
+    public Slice<BookListResponse> searchBooks(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,

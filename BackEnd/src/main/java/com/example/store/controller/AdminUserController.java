@@ -1,9 +1,12 @@
 package com.example.store.controller;
 
+import java.time.LocalDateTime;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.store.dto.CursorPageResponse;
 import com.example.store.dto.UserDetailResponse;
 import com.example.store.dto.UserListResponse;
 import com.example.store.dto.UserRoleUpdateRequest;
@@ -36,16 +40,41 @@ public class AdminUserController {
     /**
      * GET /admin/users
      * Get paginated list of users with optional filtering
-     * Query params: role (ADMIN/CUSTOMER), status (ACTIVE/INACTIVE)
+     * Query params: role (ADMIN/CUSTOMER), status (ACTIVE/INACTIVE), username
      */
     @GetMapping
     public ResponseEntity<Page<UserListResponse>> getAllUsers(
         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
         @RequestParam(required = false) String role,
-        @RequestParam(required = false) String status
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) String username
     ) {
-        Page<UserListResponse> users = userService.getAllUsers(pageable, role, status);
+        Page<UserListResponse> users = userService.getAllUsers(pageable, role, status, username);
         return ResponseEntity.ok(users);
+    }
+
+    /**
+     * GET /admin/users/cursor
+     * Keyset (cursor) pagination — no COUNT(*) overhead, O(1) per page at any depth.
+     *
+     * First page: omit lastId and lastCreatedAt.
+     * Subsequent pages: pass nextLastId and nextLastCreatedAt from the previous response.
+     * Sort is always created_at DESC, id DESC.
+     */
+    @GetMapping("/cursor")
+    public ResponseEntity<CursorPageResponse<UserListResponse>> getAllUsersCursor(
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Long lastId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime lastCreatedAt,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String username
+    ) {
+        int cappedSize = Math.min(Math.max(size, 1), 100);
+        CursorPageResponse<UserListResponse> response =
+                userService.getAllUsersCursor(cappedSize, lastId, lastCreatedAt, role, status, username);
+        return ResponseEntity.ok(response);
     }
 
     /**

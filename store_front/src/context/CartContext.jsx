@@ -15,11 +15,20 @@ export function CartProvider({ children }) {
   const [totalPrice, setTotalPrice] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+
+  const isPrivilegedUser = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const refreshCart = useCallback(async () => {
+    if (!isAuthenticated || isPrivilegedUser) {
+      setItems([]);
+      setTotalPrice(0);
+      setError('');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
     try {
@@ -36,7 +45,7 @@ export function CartProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isAuthenticated, isPrivilegedUser]);
 
   // Load cart on first mount
   useEffect(() => {

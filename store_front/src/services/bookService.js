@@ -76,6 +76,7 @@ function mapBookPage(data, mapFn) {
     number: data?.pageable?.pageNumber ?? data?.number ?? 0,
     first: data?.first ?? false,
     last: data?.last ?? false,
+    hasMore: data?.last === false,
   };
 }
 

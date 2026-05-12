@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import com.example.store.dto.BookListResponse;
@@ -37,7 +37,7 @@ public class BookService {
 
     @Value("${book.search.fulltext.enabled:true}")
     private boolean fullTextSearchEnabled;
- 
+
     public BookService(
             BookRepository bookRepository,
             ProductSkuRepository productSkuRepository,
@@ -47,44 +47,46 @@ public class BookService {
         this.bookCategoryRepository = bookCategoryRepository;
     }
 
-    public Page<BookListResponse> getBooks(Pageable pageable) {
+    public Slice<BookListResponse> getBooks(Pageable pageable) {
         Pageable cappedPageable = capPageSize(pageable, 50);
-        Page<BookRepository.BookListRow> books = bookRepository.findListByDeletedAtIsNull(cappedPageable);
-        return mapToListPage(books);
+        Slice<BookRepository.BookListRow> books = bookRepository.findListByDeletedAtIsNull(cappedPageable);
+        return mapToListSlice(books);
     }
 
-    public Page<BookListResponse> getNewBooks(Pageable pageable) {
-        // Cap page size to prevent abuse
+    public Slice<BookListResponse> getNewBooks(Pageable pageable) {
         Pageable cappedPageable = capPageSize(pageable, 50);
-        
-        // Calculate cutoff dates
+
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         LocalDateTime cutoffDateTime = now.minusDays(newThresholdDays);
         LocalDate cutoffDate = cutoffDateTime.toLocalDate();
 
-        Page<BookRepository.BookListRow> books = bookRepository.findNewBookList(
-            cutoffDate,
-            cutoffDateTime,
-            cappedPageable);
-        return mapToListPage(books);
+        Slice<BookRepository.BookListRow> books = bookRepository.findNewBookList(
+                cutoffDate, cutoffDateTime, cappedPageable);
+        return mapToListSlice(books);
     }
- 
+
     public BookResponse getBookById(Long id) {
         return bookRepository.findById(id)
-            .map(this::mapToDetailResponse)
-            .orElseThrow(() -> new ResourceNotFoundException("Book not found"));
+                .map(this::mapToDetailResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found"));
     }
 
-    public Page<BookListResponse> searchBooks(String keyword, Pageable pageable) {
-        Pageable cappedPageable = capPageSize(pageable, 50);
-        Pageable searchPageable = fullTextSearchEnabled
-            ? mapSearchPageable(cappedPageable)
-            : cappedPageable;
+    /**
+     * mapSearchPageable is now always applied regardless of fullTextSearchEnabled.
+     *
+     * Previously it was only applied for the fulltext (native) path.  After
+     * converting searchBookListFallback to a native query the fallback path also
+     * needs camelCase → snake_case sort-property mapping so Spring Data JPA emits
+     * the correct column names in the appended ORDER BY clause.
+     */
+    public Slice<BookListResponse> searchBooks(String keyword, Pageable pageable) {
+        Pageable cappedPageable  = capPageSize(pageable, 50);
+        Pageable searchPageable  = mapSearchPageable(cappedPageable);
 
-        Page<BookRepository.BookListRow> books = fullTextSearchEnabled
-            ? bookRepository.searchBookListFullText(keyword, searchPageable)
-            : bookRepository.searchBookListFallback(keyword, searchPageable);
-        return mapToListPage(books);
+        Slice<BookRepository.BookListRow> books = fullTextSearchEnabled
+                ? bookRepository.searchBookListFullText(keyword, searchPageable)
+                : bookRepository.searchBookListFallback(keyword, searchPageable);
+        return mapToListSlice(books);
     }
 
     public List<BookListResponse> getBooksByIdsOrdered(List<Long> bookIds) {
@@ -110,6 +112,10 @@ public class BookService {
         return result;
     }
 
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
     private Pageable capPageSize(Pageable pageable, int maxSize) {
         if (pageable.getPageSize() > maxSize) {
             return PageRequest.of(pageable.getPageNumber(), maxSize, pageable.getSort());
@@ -125,18 +131,17 @@ public class BookService {
         List<Sort.Order> mappedOrders = new ArrayList<>();
         for (Sort.Order order : pageable.getSort()) {
             String column = switch (order.getProperty()) {
-                case "createdAt" -> "created_at";
+                case "createdAt"     -> "created_at";
                 case "publishedDate" -> "published_date";
-                case "title" -> "title";
-                default -> "created_at";
+                case "title"         -> "title";
+                default              -> "created_at";
             };
             mappedOrders.add(new Sort.Order(order.getDirection(), column));
         }
-
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(mappedOrders));
     }
 
-    private Page<BookListResponse> mapToListPage(Page<BookRepository.BookListRow> books) {
+    private Slice<BookListResponse> mapToListSlice(Slice<BookRepository.BookListRow> books) {
         if (books.isEmpty()) {
             return books.map(book -> mapToListResponse(book, List.of()));
         }
@@ -165,12 +170,10 @@ public class BookService {
                     .id(row.getCategoryId())
                     .name(row.getCategoryName())
                     .build();
-
             categoriesByBookId
                     .computeIfAbsent(bookId, key -> new ArrayList<>())
                     .add(info);
         }
-
         return categoriesByBookId;
     }
 
@@ -187,60 +190,67 @@ public class BookService {
                 .build();
     }
 
+    /**
+     * Maps a Book entity to the public detail response.
+     *
+     * Previously this called resolveDefaultSku() which issued 1-2 extra queries
+     * to fetch the default SKU separately, then findByBookId() fetched all SKUs
+     * again (including the same default SKU).  Now a single findByBookId() call
+     * is made — the @EntityGraph on that method eagerly loads inventory for every
+     * SKU, so no lazy-load round trips occur per SKU either.
+     */
     private BookResponse mapToDetailResponse(Book book) {
-        ProductSku defaultSku = resolveDefaultSku(book);
-        BigDecimal price = defaultSku != null ? defaultSku.resolveCurrentPrice() : book.getBasePrice();
-        
-        // Get all SKUs for this book
+        // Single query — inventory is eagerly loaded via @EntityGraph on findByBookId
         List<ProductSku> allSkus = productSkuRepository.findByBookId(book.getId());
+
+        // Resolve defaultSku from the already-loaded list; avoids a redundant findById
+        ProductSku defaultSku = allSkus.stream()
+                .filter(s -> s.getId().equals(book.getDefaultSkuId()))
+                .findFirst()
+                .orElseGet(() -> allSkus.isEmpty() ? null : allSkus.get(0));
+
+        BigDecimal price = defaultSku != null ? defaultSku.resolveCurrentPrice() : book.getBasePrice();
+
         List<BookResponse.SkuInfo> skuInfos = allSkus.stream()
-            .map(sku -> mapToSkuInfo(sku, book.getDefaultSkuId()))
-            .toList();
+                .map(sku -> mapToSkuInfo(sku, book.getDefaultSkuId()))
+                .toList();
 
         return BookResponse.builder()
-            .id(book.getId())
-            .title(book.getTitle())
-            .subtitle(book.getSubtitle())
-            .publishedDate(book.getPublishedDate())
-            .description(book.getDescription())
-            .language(book.getLanguage())
-            .pages(book.getPages())
-            .price(price)
-            .sku(defaultSku != null ? defaultSku.getSku() : null)
-            .imageUrl(book.getImageUrl())
-            .skus(skuInfos)
-            .build();
+                .id(book.getId())
+                .title(book.getTitle())
+                .subtitle(book.getSubtitle())
+                .publishedDate(book.getPublishedDate())
+                .description(book.getDescription())
+                .language(book.getLanguage())
+                .pages(book.getPages())
+                .price(price)
+                .sku(defaultSku != null ? defaultSku.getSku() : null)
+                .imageUrl(book.getImageUrl())
+                .skus(skuInfos)
+                .build();
     }
-    
+
     private BookResponse.SkuInfo mapToSkuInfo(ProductSku sku, Long defaultSkuId) {
         int availableStock = 0;
         if (sku.getInventory() != null) {
             availableStock = sku.getInventory().getStock() - sku.getInventory().getReserved();
-            availableStock = Math.max(0, availableStock); // Ensure non-negative
+            availableStock = Math.max(0, availableStock);
         }
-        boolean inStock = availableStock > 0;
+        boolean inStock   = availableStock > 0;
         boolean isDefault = sku.getId().equals(defaultSkuId);
-        
-        return BookResponse.SkuInfo.builder()
-            .id(sku.getId())
-            .sku(sku.getSku())
-            .format(sku.getFormat())
-            .price(sku.resolveCurrentPrice())
-            .inStock(inStock)
-            .availableStock(availableStock)
-            .isDefault(isDefault)
-            .weightGrams(sku.getWeightGrams())
-            .lengthMm(sku.getLengthMm())
-            .widthMm(sku.getWidthMm())
-            .heightMm(sku.getHeightMm())
-            .build();
-    }
 
-    private ProductSku resolveDefaultSku(Book book) {
-        if (book.getDefaultSkuId() != null) {
-            return productSkuRepository.findById(book.getDefaultSkuId())
-                .orElseGet(() -> productSkuRepository.findFirstByBookId(book.getId()).orElse(null));
-        }
-        return productSkuRepository.findFirstByBookId(book.getId()).orElse(null);
+        return BookResponse.SkuInfo.builder()
+                .id(sku.getId())
+                .sku(sku.getSku())
+                .format(sku.getFormat())
+                .price(sku.resolveCurrentPrice())
+                .inStock(inStock)
+                .availableStock(availableStock)
+                .isDefault(isDefault)
+                .weightGrams(sku.getWeightGrams())
+                .lengthMm(sku.getLengthMm())
+                .widthMm(sku.getWidthMm())
+                .heightMm(sku.getHeightMm())
+                .build();
     }
 }

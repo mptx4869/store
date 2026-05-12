@@ -44,8 +44,17 @@ function mapUserDetail(u) {
   };
 }
 
+function mapUserCursorPage(data) {
+  return {
+    content: Array.isArray(data?.content) ? data.content.map(mapUserListItem) : [],
+    hasNext: !!data?.hasNext,
+    nextLastId: data?.nextLastId ?? null,
+    nextLastCreatedAt: data?.nextLastCreatedAt ?? null,
+  };
+}
+
 const adminUserService = {
-  async getUsers({ page = 0, size = 20, sort = 'createdAt,desc', role, status } = {}) {
+  async getUsers({ page = 0, size = 20, sort = 'createdAt,desc', role, status, username } = {}) {
     try {
       const params = new URLSearchParams();
       params.set('page', String(page));
@@ -53,6 +62,7 @@ const adminUserService = {
       params.set('sort', String(sort));
       if (role) params.set('role', role);
       if (status) params.set('status', status);
+      if (username) params.set('username', username);
 
       const data = await api.get(`/admin/users?${params.toString()}`);
 
@@ -68,6 +78,26 @@ const adminUserService = {
         numberOfElements: data?.numberOfElements ?? 0,
         empty: !!data?.empty,
       };
+    } catch (error) {
+      throw buildAdminUserError(error);
+    }
+  },
+
+  /**
+   * GET /admin/users/cursor
+   */
+  async getUsersCursor({ size = 20, lastId, lastCreatedAt, role, status, username } = {}) {
+    try {
+      const params = new URLSearchParams();
+      params.set('size', String(size));
+      if (lastId !== undefined && lastId !== null) params.set('lastId', String(lastId));
+      if (lastCreatedAt) params.set('lastCreatedAt', lastCreatedAt);
+      if (role) params.set('role', role);
+      if (status) params.set('status', status);
+      if (username) params.set('username', username);
+
+      const data = await api.get(`/admin/users/cursor?${params.toString()}`);
+      return mapUserCursorPage(data);
     } catch (error) {
       throw buildAdminUserError(error);
     }

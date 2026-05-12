@@ -12,20 +12,28 @@ function AdminLowStockPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [size] = useState(20);
+
   // Update stock modal
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState(null);
 
   useEffect(() => {
     loadLowStock();
-  }, []);
+  }, [page]);
 
   const loadLowStock = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const result = await adminInventoryService.getLowStock();
-      setInventories(result);
+      const result = await adminInventoryService.getLowStock({ page, size });
+      setInventories(result.content);
+      setTotalPages(result.totalPages);
+      setTotalElements(result.totalElements);
     } catch (err) {
       setError(err.message || 'Could not load low stock list');
       toast.error(err. message);
@@ -97,19 +105,19 @@ function AdminLowStockPage() {
             Low Stock
           </h1>
           <p className="text-gray-600 mt-1">
-            {inventories.length} SKU need restocking
+            Total: {totalElements} SKU need restocking
           </p>
         </div>
       </div>
 
       {/* Alert Banner */}
-      {inventories.length > 0 && (
+      {totalElements > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-semibold text-yellow-800">Low stock warning</p>
             <p className="text-sm text-yellow-700 mt-1">
-              There are {inventories.length} SKUs at low stock level (below 10 products). 
+              There are {totalElements} SKUs at low stock level (below 10 products). 
               Please restock to avoid running out.
             </p>
           </div>
@@ -242,15 +250,55 @@ function AdminLowStockPage() {
           <div className="bg-gray-50 px-6 py-4 border-t">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">
-                Total: <strong>{inventories.length}</strong> SKUs need restocking
+                Showing <strong>{inventories.length}</strong> of <strong>{totalElements}</strong> SKUs
               </span>
               <span className="text-gray-600">
-                Out of stock: <strong className="text-red-600">
+                Out of stock (page): <strong className="text-red-600">
                   {inventories.filter(inv => inv.status === 'OUT_OF_STOCK').length}
                 </strong>
               </span>
             </div>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
+              <div className="text-sm text-gray-700">
+                Page {page + 1} / {totalPages}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(0)}
+                  disabled={page === 0}
+                  className="btn-secondary px-3 py-1 text-sm disabled:opacity-50"
+                >
+                  First
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="btn-secondary px-3 py-1 text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="btn-secondary px-3 py-1 text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => setPage(totalPages - 1)}
+                  disabled={page >= totalPages - 1}
+                  className="btn-secondary px-3 py-1 text-sm disabled:opacity-50"
+                >
+                  Last
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

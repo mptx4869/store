@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import adminUserService from '../../services/adminUserService';
 import { useToast } from '../../context/ToastContext';
@@ -11,40 +11,53 @@ function formatDateTime(iso) {
 
 function AdminUsersPage() {
   const toast = useToast();
+  const defaultCursor = { lastId: null, lastCreatedAt: null };
 
   const [role, setRole] = useState(''); // '', 'ADMIN', 'CUSTOMER'
   const [status, setStatus] = useState(''); // '', 'ACTIVE', 'INACTIVE'
+  const [username, setUsername] = useState('');
+  const [usernameInput, setUsernameInput] = useState('');
 
-  const [page, setPage] = useState(0);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [cursorStack, setCursorStack] = useState([defaultCursor]);
+  const [hasNext, setHasNext] = useState(false);
   const [size] = useState(20);
-
-  const [data, setData] = useState({
-    content: [],
-    totalElements: 0,
-    totalPages: 0,
-    number: 0,
-    size: 20,
-    first: true,
-    last: true,
-  });
+  const [users, setUsers] = useState([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const sort = useMemo(() => 'createdAt,desc', []);
+  const resetPagination = () => {
+    setPageIndex(0);
+    setCursorStack([defaultCursor]);
+  };
 
   const load = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const res = await adminUserService.getUsers({
-        page,
+      const cursor = cursorStack[pageIndex] || defaultCursor;
+      const res = await adminUserService.getUsersCursor({
         size,
-        sort,
+        lastId: cursor.lastId ?? undefined,
+        lastCreatedAt: cursor.lastCreatedAt ?? undefined,
         role: role || undefined,
         status: status || undefined,
+        username: username || undefined,
       });
-      setData(res);
+      setUsers(res.content);
+      const canGoNext = !!res.hasNext && res.nextLastId && res.nextLastCreatedAt;
+      setHasNext(canGoNext);
+      setCursorStack((prev) => {
+        const next = prev.slice(0, pageIndex + 1);
+        if (canGoNext) {
+          next[pageIndex + 1] = {
+            lastId: res.nextLastId,
+            lastCreatedAt: res.nextLastCreatedAt,
+          };
+        }
+        return next;
+      });
     } catch (err) {
       setError(err.message || 'Could not load user list');
     } finally {
@@ -55,7 +68,7 @@ function AdminUsersPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, role, status]);
+  }, [pageIndex, role, status, username]);
 
   const handleToggleStatus = async (u) => {
     const next = u.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
@@ -69,10 +82,7 @@ function AdminUsersPage() {
     try {
       const updated = await adminUserService.updateUserStatus(u.id, next);
       toast.success(`Updated status of "${updated.username}" to ${updated.status}.`);
-      setData((prev) => ({
-        ...prev,
-        content: prev.content.map((x) => (x.id === u.id ? { ...x, status: updated.status } : x)),
-      }));
+      setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, status: updated.status } : x)));
     } catch (err) {
       toast.error(err.message || 'Could not update status.');
     }
@@ -90,16 +100,19 @@ function AdminUsersPage() {
     try {
       const updated = await adminUserService.updateUserRole(u.id, next);
       toast.success(`Updated role of "${updated.username}" to ${updated.role}.`);
-      setData((prev) => ({
-        ...prev,
-        content: prev.content.map((x) => (x.id === u.id ? { ...x, role: updated.role } : x)),
-      }));
+      setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, role: updated.role } : x)));
     } catch (err) {
       toast.error(err.message || 'Could not update role.');
     }
   };
 
-  const resetToFirstPage = () => setPage(0);
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const trimmed = usernameInput.trim();
+    setUsername(trimmed);
+    setUsernameInput(trimmed);
+    resetPagination();
+  };
 
   return (
     <div>
@@ -112,19 +125,30 @@ function AdminUsersPage() {
         </div>
 
         <div className="text-sm text-gray-600">
-          Total: <span className="font-semibold text-gray-800">{data.totalElements}</span>
+          Showing: <span className="font-semibold text-gray-800">{users.length}</span>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="grid sm:grid-cols-3 gap-3 mt-6">
+      <form className="grid sm:grid-cols-5 gap-3 mt-6" onSubmit={handleSearchSubmit}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+          <input
+            type="text"
+            value={usernameInput}
+            onChange={(e) => setUsernameInput(e.target.value)}
+            className="input-field w-full"
+            placeholder="Search username"
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
           <select
             value={role}
             onChange={(e) => {
               setRole(e.target.value);
-              resetToFirstPage();
+              resetPagination();
             }}
             className="input-field w-full"
           >
@@ -140,7 +164,7 @@ function AdminUsersPage() {
             value={status}
             onChange={(e) => {
               setStatus(e.target.value);
-              resetToFirstPage();
+              resetPagination();
             }}
             className="input-field w-full"
           >
@@ -151,18 +175,27 @@ function AdminUsersPage() {
         </div>
 
         <div className="flex items-end">
+          <button className="btn-primary w-full" type="submit">
+            Search
+          </button>
+        </div>
+
+        <div className="flex items-end">
           <button
             className="btn-secondary w-full"
+            type="button"
             onClick={() => {
               setRole('');
               setStatus('');
-              setPage(0);
+              setUsername('');
+              setUsernameInput('');
+              resetPagination();
             }}
           >
             Reset filters
           </button>
         </div>
-      </div>
+      </form>
 
       {/* Content */}
       <div className="mt-6">
@@ -189,7 +222,7 @@ function AdminUsersPage() {
               </thead>
 
               <tbody className="text-gray-800">
-                {data.content.map((u) => (
+                {users.map((u) => (
                   <tr key={u.id} className="border-t">
                     <td className="py-3 px-4">
                       <Link
@@ -226,7 +259,7 @@ function AdminUsersPage() {
                   </tr>
                 ))}
 
-                {data.content.length === 0 && (
+                {users.length === 0 && (
                   <tr className="border-t">
                     <td className="py-6 px-4 text-center text-gray-500" colSpan={6}>
                       No users match the current filters.
@@ -239,24 +272,24 @@ function AdminUsersPage() {
         )}
 
         {/* Pagination */}
-        {!isLoading && !error && data.totalPages > 1 && (
+        {!isLoading && !error && (pageIndex > 0 || hasNext) && (
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-gray-500">
-              Page {data.number + 1} / {data.totalPages}
+              Page {pageIndex + 1}
             </p>
 
             <div className="flex gap-2">
               <button
                 className="btn-secondary"
-                disabled={data.first}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={pageIndex === 0}
+                onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
               >
                 Prev
               </button>
               <button
                 className="btn-secondary"
-                disabled={data.last}
-                onClick={() => setPage((p) => p + 1)}
+                disabled={!hasNext}
+                onClick={() => setPageIndex((p) => p + 1)}
               >
                 Next
               </button>

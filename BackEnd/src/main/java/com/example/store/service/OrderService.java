@@ -102,6 +102,11 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
+        // Atomically increment the denormalized counter on the user row.
+        // Runs inside the same transaction as the order save, so the counter
+        // stays consistent even under concurrent order creation.
+        userRepository.incrementTotalOrders(user.getId());
+
         cart.getItems().clear();
         cart.setStatus(CART_STATUS_COMPLETED);
         cart.setSubtotal(BigDecimal.ZERO);
@@ -113,8 +118,9 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<OrderResponse> getOrderHistory(String username) {
-        User user = fetchUser(username);
-        return orderRepository.findByUserOrderByCreatedAtDesc(user).stream()
+        Long userId = userRepository.findIdByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
             .map(this::mapToResponse)
             .toList();
     }

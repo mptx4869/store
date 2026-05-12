@@ -1,10 +1,13 @@
 package com.example.store.controller;
 
+import java.time.LocalDateTime;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.store.dto.AdminBookResponse;
 import com.example.store.dto.BookCreateRequest;
 import com.example.store.dto.BookUpdateRequest;
+import com.example.store.dto.CursorPageResponse;
 import com.example.store.dto.SkuCreateRequest;
 import com.example.store.dto.SkuUpdateRequest;
 import com.example.store.service.AdminBookService;
@@ -44,16 +48,50 @@ public class AdminBookController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDirection,
-            @RequestParam(required = false) Boolean includeDeleted) {
+            @RequestParam(required = false) Boolean includeDeleted,
+            @RequestParam(required = false) Boolean deletedOnly,
+            @RequestParam(required = false) Long id,
+            @RequestParam(required = false) String title) {
         
         Sort sort = sortDirection.equalsIgnoreCase("DESC") 
                 ? Sort.by(sortBy).descending() 
                 : Sort.by(sortBy).ascending();
         
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<AdminBookResponse> books = adminBookService.getAllBooks(pageable, includeDeleted);
+        Page<AdminBookResponse> books = adminBookService.getAllBooks(
+            pageable,
+            includeDeleted,
+            deletedOnly,
+            id,
+            title
+        );
         
         return ResponseEntity.ok(books);
+    }
+
+    /**
+     * GET /admin/books/cursor
+     * Keyset (cursor) pagination — no COUNT(*) overhead, O(1) per page at any depth.
+     *
+     * First page: omit lastId and lastCreatedAt.
+     * Subsequent pages: pass nextLastId and nextLastCreatedAt from the previous response.
+     * Sort is always created_at DESC, id DESC.
+     */
+    @GetMapping("/cursor")
+    public ResponseEntity<CursorPageResponse<AdminBookResponse>> getAllBooksCursor(
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Long lastId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime lastCreatedAt,
+            @RequestParam(required = false) Boolean includeDeleted,
+            @RequestParam(required = false) Boolean deletedOnly,
+            @RequestParam(required = false) Long id,
+            @RequestParam(required = false) String title) {
+
+        int cappedSize = Math.min(Math.max(size, 1), 100);
+        CursorPageResponse<AdminBookResponse> response = adminBookService.getAllBooksCursor(
+                cappedSize, lastId, lastCreatedAt, includeDeleted, deletedOnly, id, title);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{bookId}")

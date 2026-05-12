@@ -222,18 +222,18 @@ public class InventoryService {
      * Get low stock inventory items (Admin only)
      */
     @Transactional(readOnly = true)
-    public List<InventoryListResponse> getLowStockInventory() {
-        List<Inventory> allInventory = inventoryRepository.findAll();
-        
-        return allInventory.stream()
-            .filter(inventory -> {
-                int stock = inventory.getStock() != null ? inventory.getStock() : 0;
-                int reserved = inventory.getReserved() != null ? inventory.getReserved() : 0;
-                int available = stock - reserved;
-                return available <= LOW_STOCK_THRESHOLD;
-            })
-            .map(this::mapToListResponse)
-            .toList();
+    public Page<InventoryListResponse> getLowStockInventory(Pageable pageable) {
+        Page<InventoryRepository.InventoryListRow> rows =
+            inventoryRepository.findLowStockRows(LOW_STOCK_THRESHOLD, pageable);
+        return rows.map(this::mapToListResponse);
+    }
+
+    /**
+     * Get low stock count (Admin only)
+     */
+    @Transactional(readOnly = true)
+    public long getLowStockCount() {
+        return inventoryRepository.countLowStock(LOW_STOCK_THRESHOLD);
     }
     
     /**
@@ -306,6 +306,36 @@ public class InventoryService {
             .availableStock(availableStock)
             .status(status)
             .lastUpdated(inventory.getLastUpdated())
+            .build();
+    }
+
+    private InventoryListResponse mapToListResponse(InventoryRepository.InventoryListRow row) {
+        int totalStock = row.getTotalStock() != null ? row.getTotalStock() : 0;
+        int reservedStock = row.getReservedStock() != null ? row.getReservedStock() : 0;
+        int availableStock = row.getAvailableStock() != null
+            ? row.getAvailableStock()
+            : totalStock - reservedStock;
+
+        String status;
+        if (availableStock == 0) {
+            status = "OUT_OF_STOCK";
+        } else if (availableStock <= LOW_STOCK_THRESHOLD) {
+            status = "LOW_STOCK";
+        } else {
+            status = "IN_STOCK";
+        }
+
+        return InventoryListResponse.builder()
+            .skuId(row.getSkuId())
+            .sku(row.getSku())
+            .bookId(row.getBookId())
+            .bookTitle(row.getBookTitle())
+            .format(row.getFormat())
+            .totalStock(totalStock)
+            .reservedStock(reservedStock)
+            .availableStock(availableStock)
+            .status(status)
+            .lastUpdated(row.getLastUpdated())
             .build();
     }
 }

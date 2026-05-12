@@ -4,6 +4,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+.project_guiline
 
 ### STS ###
 .apt_generated
@@ -49,3 +50,5 @@ uploads/
 !**/src/test/resources/**/*.png
 *.log
 DB/thesis_database.sql
+/DB
+.claude
