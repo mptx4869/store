@@ -47,7 +47,7 @@ const adminCategoryService = {
   /**
    * GET /admin/categories
    */
-  async getCategories({ page = 0, size = 10, sortBy = 'createdAt', sortDirection = 'DESC' } = {}) {
+  async getCategories({ page = 0, size = 20, sortBy = 'id', sortDirection = 'DESC' } = {}) {
     try {
       const params = new URLSearchParams({
         page:  String(page),

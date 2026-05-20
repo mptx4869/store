@@ -16,11 +16,11 @@ function AdminCategoriesPage() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [size] = useState(10);
+  const [size] = useState(20);
 
   // Sort state
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortDirection, setSortDirection] = useState('DESC');
+  const [sortBy, setSortBy] = useState('id');
+  const [sortDirection, setSortDirection] = useState('ASC');
 
   useEffect(() => {
     loadCategories();

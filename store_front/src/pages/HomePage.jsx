@@ -12,6 +12,10 @@ function HomePage() {
   const [isLoadingNew, setIsLoadingNew] = useState(true);
   const [newError, setNewError] = useState('');
 
+  const [bestSellerBooks, setBestSellerBooks] = useState([]);
+  const [isLoadingBest, setIsLoadingBest] = useState(true);
+  const [bestError, setBestError] = useState('');
+
   const [recommendedBooks, setRecommendedBooks] = useState([]);
   const [isLoadingRec, setIsLoadingRec] = useState(true);
   const [recError, setRecError] = useState('');
@@ -25,8 +29,8 @@ function HomePage() {
       try {
         const result = await bookService.getNewBooks({
           page: 0,
-          size: 6,
-          sortBy: 'publishedDate',
+          size: 20,
+          sortBy: 'createdAt',
           sortDirection: 'DESC',
         });
         if (isMounted) setNewBooks(result.content);
@@ -60,8 +64,25 @@ function HomePage() {
       }
     };
 
+    const loadBestSellers = async () => {
+      setIsLoadingBest(true);
+      setBestError('');
+      try {
+        const result = await bookService.getBestSellers({
+          days: 0,
+          limit: 20,
+        });
+        if (isMounted) setBestSellerBooks(result);
+      } catch (err) {
+        if (isMounted) setBestError(err.message || 'Could not load bestsellers');
+      } finally {
+        if (isMounted) setIsLoadingBest(false);
+      }
+    };
+
     loadNewBooks();
     loadRecommendations();
+    loadBestSellers();
 
     return () => { isMounted = false; };
   }, [user?.username]);
@@ -122,9 +143,9 @@ function HomePage() {
       <BookCarousel
         title="Bestsellers"
         subtitle="Most popular books right now"
-        books={newBooks}
-        isLoading={isLoadingNew}
-        error={newError}
+        books={bestSellerBooks}
+        isLoading={isLoadingBest}
+        error={bestError}
         viewAllLink="/bestsellers"
       />
 

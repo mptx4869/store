@@ -19,7 +19,7 @@ function AdminBooksPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [cursorStack, setCursorStack] = useState([defaultCursor]);
   const [hasNext, setHasNext] = useState(false);
-  const [size] = useState(10);
+  const [size] = useState(20);
 
   // Filter state
   const [includeDeleted, setIncludeDeleted] = useState(false);

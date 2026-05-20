@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import bookService from '../services/bookService';
 import { BookCard } from '../components/features';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 32;
 
 function BooksPage() {
   const [books, setBooks] = useState([]);
@@ -18,13 +18,14 @@ function BooksPage() {
   const searchParams = new URLSearchParams(location.search);
   const searchKeyword = searchParams.get('q');
   const filter = searchParams.get('filter');
+  const isBestSellersRoute = location.pathname === '/bestsellers';
 
   // Reset list when search or filter changes
   useEffect(() => {
     setBooks([]);
     setPage(0);
     setHasMore(true);
-  }, [searchKeyword, filter]);
+  }, [searchKeyword, filter, isBestSellersRoute]);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,13 +44,25 @@ function BooksPage() {
           pageData = await bookService.searchBooks(searchKeyword, page, PAGE_SIZE);
         } else if (filter === 'new') {
           pageData = await bookService.getNewBooks({ page, size: PAGE_SIZE });
+        } else if (isBestSellersRoute) {
+          pageData = await bookService.getBestSellers({ days: 0, limit: PAGE_SIZE });
         } else {
-          pageData = await bookService.getBooks({ page, size: PAGE_SIZE });
+          pageData = await bookService.getBooks({
+            page,
+            size: PAGE_SIZE,
+            sortBy: 'id',
+            sortDirection: 'DESC',
+          });
         }
 
         if (cancelled) return;
-        setBooks((prev) => (isFirstPage ? pageData.content : [...prev, ...pageData.content]));
-        setHasMore(!!pageData.hasMore);
+        if (isBestSellersRoute) {
+          setBooks(pageData);
+          setHasMore(false);
+        } else {
+          setBooks((prev) => (isFirstPage ? pageData.content : [...prev, ...pageData.content]));
+          setHasMore(!!pageData.hasMore);
+        }
       } catch (err) {
         if (cancelled) return;
         setError(err.message || 'Could not load book list');
@@ -66,7 +79,7 @@ function BooksPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchKeyword, filter, page]);
+  }, [searchKeyword, filter, isBestSellersRoute, page]);
 
   const handleLoadMore = () => {
     if (isLoadingMore || !hasMore) return;
@@ -94,7 +107,11 @@ function BooksPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-8">
-        {searchKeyword ? `Search Results for "${searchKeyword}"` : (filter === 'new' ? 'New Books' : 'Books')}
+        {searchKeyword
+          ? `Search Results for "${searchKeyword}"`
+          : (filter === 'new'
+            ? 'New Books'
+            : (isBestSellersRoute ? 'Bestsellers' : 'Books'))}
       </h1>
 
       {books.length === 0 ? (

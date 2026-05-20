@@ -39,6 +39,9 @@ public class BookService {
     @Value("${book.search.fulltext.enabled:true}")
     private boolean fullTextSearchEnabled;
 
+    @Value("${book.bestseller.threshold-days:30}")
+    private int bestSellerThresholdDays;
+
     public BookService(
             BookRepository bookRepository,
             ProductSkuRepository productSkuRepository,
@@ -64,6 +67,15 @@ public class BookService {
         Slice<BookRepository.BookListRow> books = bookRepository.findNewBookList(
                 cutoffDate, cutoffDateTime, cappedPageable);
         return mapToListSlice(books);
+    }
+
+    public List<BookListResponse> getBestSellerBooks(int days, int limit) {
+        int effectiveDays  = days  > 0 ? days  : bestSellerThresholdDays;
+        int effectiveLimit = Math.min(limit > 0 ? limit : 30, 100);
+        Pageable pageable = PageRequest.of(0, effectiveLimit);
+        Slice<BookRepository.BookListRow> books = bookRepository.findBestSellerList(
+                effectiveDays, pageable);
+        return mapToListSlice(books).getContent();
     }
 
     public BookResponse getBookById(Long id) {

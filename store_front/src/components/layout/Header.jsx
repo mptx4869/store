@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Search,
   ShoppingCart,
@@ -21,6 +21,7 @@ function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { totalItems } = useCart();
   const { user, isAuthenticated, logout } = useAuth();
@@ -52,6 +53,11 @@ function Header() {
   };
 
   const closeMenu = () => setIsMenuOpen(false);
+
+  const isActiveLink = (to) => {
+    const current = `${location.pathname}${location.search}`;
+    return current === to;
+  };
 
   return (
     <header className="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm">
@@ -116,6 +122,7 @@ function Header() {
                     </div>
 
                     <div className="py-1">
+                      {/*
                       <Link
                         to="/profile"
                         onClick={() => setShowUserMenu(false)}
@@ -124,6 +131,7 @@ function Header() {
                         <User className="w-4 h-4 text-slate-400" />
                         My Account
                       </Link>
+                      */}
                       <Link
                         to="/orders"
                         onClick={() => setShowUserMenu(false)}
@@ -132,6 +140,7 @@ function Header() {
                         <Package className="w-4 h-4 text-slate-400" />
                         Orders
                       </Link>
+                      {/*
                       <Link
                         to="/wishlist"
                         onClick={() => setShowUserMenu(false)}
@@ -140,6 +149,7 @@ function Header() {
                         <Heart className="w-4 h-4 text-slate-400" />
                         Wishlist
                       </Link>
+                      */}
                       <Link
                         to="/settings/change-password"
                         onClick={() => setShowUserMenu(false)}
@@ -229,8 +239,11 @@ function Header() {
               <li key={to}>
                 <Link
                   to={to}
-                  className="px-4 py-2 rounded-full text-sm font-medium text-slate-600
-                             hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    isActiveLink(to)
+                      ? 'text-blue-700 bg-blue-50 ring-1 ring-blue-200'
+                      : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50'
+                  }`}
                 >
                   {label}
                 </Link>
@@ -263,7 +276,11 @@ function Header() {
                 key={to}
                 to={to}
                 onClick={closeMenu}
-                className="block px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-50 font-medium text-sm transition-colors"
+                className={`block px-3 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+                  isActiveLink(to)
+                    ? 'text-blue-700 bg-blue-50 ring-1 ring-blue-200'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
               >
                 {label}
               </Link>

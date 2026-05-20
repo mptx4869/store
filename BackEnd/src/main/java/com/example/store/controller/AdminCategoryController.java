@@ -35,7 +35,7 @@ public class AdminCategoryController {
     @GetMapping
     public ResponseEntity<Page<AdminCategoryResponse>> getAllCategories(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDirection) {
         

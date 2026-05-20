@@ -9,6 +9,26 @@ function formatDateTime(iso) {
   return d.toLocaleString();
 }
 
+function statusBadgeClass(status) {
+  switch (status) {
+    case 'PLACED':
+      return 'bg-blue-50 text-blue-700 border-blue-100';
+    case 'CONFIRMED':
+      return 'bg-indigo-50 text-indigo-700 border-indigo-100';
+    case 'PROCESSING':
+      return 'bg-yellow-50 text-yellow-700 border-yellow-100';
+    case 'SHIPPED':
+      return 'bg-purple-50 text-purple-700 border-purple-100';
+    case 'DELIVERED':
+      return 'bg-green-50 text-green-700 border-green-100';
+    case 'CANCELLED':
+    case 'RETURNED':
+      return 'bg-red-50 text-red-700 border-red-100';
+    default:
+      return 'bg-gray-50 text-gray-700 border-gray-100';
+  }
+}
+
 function AdminUserDetailPage() {
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -185,8 +205,23 @@ function AdminUserDetailPage() {
               <tbody className="text-gray-800">
                 {user.recentOrders.map((o) => (
                   <tr key={o.orderId} className="border-t">
-                    <td className="py-2 pr-4">#{o.orderId}</td>
-                    <td className="py-2 pr-4">{o.status}</td>
+                    <td className="py-2 pr-4">
+                      <Link
+                        to={`/admin/orders/${o.orderId}`}
+                        className="text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        #{o.orderId}
+                      </Link>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <span
+                        className={`text-xs px-3 py-1 rounded-full border ${statusBadgeClass(
+                          o.status
+                        )}`}
+                      >
+                        {o.status}
+                      </span>
+                    </td>
                     <td className="py-2 pr-4">{o.total}</td>
                     <td className="py-2 pr-4">{formatDateTime(o.createdAt)}</td>
                   </tr>

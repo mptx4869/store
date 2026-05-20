@@ -446,6 +446,29 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             @Param("lastId") Long lastId,
             Pageable pageable);
 
+    @Query(
+            value = """
+                    SELECT b.id,
+                           b.title,
+                           b.image_url    AS imageUrl,
+                           b.base_price   AS basePrice,
+                           b.created_at   AS createdAt
+                    FROM books b
+                    JOIN (
+                        SELECT oi.book_id, SUM(oi.quantity) AS total_sold
+                        FROM order_items oi
+                        JOIN orders o ON o.id = oi.order_id
+                        WHERE o.status IN ('CONFIRMED','PROCESSING','SHIPPED','DELIVERED')
+                          AND o.placed_at >= NOW() - (INTERVAL '1 day' * :days)
+                        GROUP BY oi.book_id
+                    ) bs ON bs.book_id = b.id
+                    WHERE b.deleted_at IS NULL
+                    ORDER BY bs.total_sold DESC, b.id DESC
+                    """,
+            nativeQuery = true
+    )
+    Slice<BookListRow> findBestSellerList(@Param("days") int days, Pageable pageable);
+
     // -------------------------------------------------------------------------
     // Projections
     // -------------------------------------------------------------------------

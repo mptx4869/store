@@ -1,5 +1,7 @@
 package com.example.store.controller;
 
+import java.util.List;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -52,6 +54,13 @@ public class BookController {
 
         Pageable pageable = PageRequest.of(page, size, sort);
         return bookService.getNewBooks(pageable);
+    }
+
+    @GetMapping("/bestsellers")
+    public List<BookListResponse> getBestSellerBooks(
+            @RequestParam(defaultValue = "0") int days,
+            @RequestParam(defaultValue = "0") int limit) {
+        return bookService.getBestSellerBooks(days, limit);
     }
 
     @GetMapping("/{id}")

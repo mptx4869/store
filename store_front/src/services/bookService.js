@@ -144,6 +144,26 @@ const bookService = {
       throw buildBookError(error);
     }
   },
+
+  /**
+   * GET /books/bestsellers
+   * @param {Object} options
+   * @param {number} options.days
+   * @param {number} options.limit
+   */
+  async getBestSellers({ days = 0, limit = 0 } = {}) {
+    try {
+      const params = new URLSearchParams({
+        days: String(days),
+        limit: String(limit),
+      });
+
+      const data = await api.get(`/books/bestsellers?${params}`);
+      return Array.isArray(data) ? data.map(mapBookList) : [];
+    } catch (error) {
+      throw buildBookError(error);
+    }
+  },
 };
 
 export default bookService;
